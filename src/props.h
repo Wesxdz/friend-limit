@@ -62,7 +62,7 @@ struct MoveResolver : Prop
     sf::Clock moveTimer;
     bool moveThisFrame = false;
     // If two Movers try to move to the same pos, we need to resolve this appropriately depending on the groups
-    std::unordered_map<sf::Vector2i, std::vector<sf::Vector2i>> requestedMoves; // to->froms
+//     std::unordered_map<sf::Vector2i, std::vector<sf::Vector2i>> requestedMoves; // to->froms
 };
 
 #include "Direction.h"

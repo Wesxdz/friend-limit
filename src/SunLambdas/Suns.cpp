@@ -5,70 +5,70 @@
 #include <string>
 #include "Direction.h"
 
-// void PlayerPlaceTiles_Act(WindowGameState& game, Grid& grid, Mover& mover)
-// {
-//     for (auto& event : game.events[sf::Event::EventType::KeyPressed])
-//     {
-//         if (event.key.code == sf::Keyboard::Key::Space)
-//         {
-//             sf::Vector2i placePos = mover.pos;
-//             placePos.y++;
-//             if (placePos.y == grid.rows) placePos.y = 0;
-//             grid.tiles[placePos.y][placePos.x] = BicycleMango::Next(APPLE);
-//         }
-//     }
-// }
-// 
-// void PlayerChangeMovementDirection_Act(WindowGameState& game, Mover& mover)
-// {
-//     for (auto& event : game.events[sf::Event::EventType::KeyPressed])
-//     {
-//         switch (event.key.code)
-//         {
-//             case sf::Keyboard::Key::W:
-//             case sf::Keyboard::Key::Up:
-//                 mover.nextMove = Direction::NORTH;
-//                 break;
-//             case sf::Keyboard::Key::D:
-//             case sf::Keyboard::Key::Right:
-//                 mover.nextMove = Direction::EAST;
-//                 break;
-//             case sf::Keyboard::Key::S:
-//             case sf::Keyboard::Key::Down:
-//                     mover.nextMove = Direction::SOUTH;
-//                     break;
-//             case sf::Keyboard::Key::A:
-//             case sf::Keyboard::Key::Left:
-//                 mover.nextMove = Direction::WEST;
-//                 break;
-//             default:
-//                 break;
-//         }
-//     }
-// }
-// 
-// void SetupGrid_Act(Grid& grid)
-// {
-//     for (int row = 0; row < grid.rows; row++)
-//     {
-//         for (int col = 0; col < grid.cols; col++)
-//         {
-//             grid.tiles[row][col] = {EMPTY, 0};
-//         }
-//     }
-//     grid.tiles[1][1] = {PLAYER, 0};
-//     grid.tiles[grid.rows - 2][grid.cols - 2] = {SNAKE_HEAD, 0};
-// }
-// 
-// void TickMoveEvent_Act(MoveResolver& resolver)
-// {
-//     resolver.moveThisFrame = false;
-//     if (resolver.moveTimer.getElapsedTime().asSeconds() >= resolver.timeBetweenMoves)
-//     {
-//         resolver.moveThisFrame = true;
-//         resolver.moveTimer.restart();
-//     }
-// };
+void PlayerPlaceTiles_Act(WindowGameState& game, Grid& grid, Mover& mover)
+{
+    for (auto& event : game.events[sf::Event::EventType::KeyPressed])
+    {
+        if (event.key.code == sf::Keyboard::Key::Space)
+        {
+            sf::Vector2i placePos = mover.pos;
+            placePos.y++;
+            if (placePos.y == grid.rows) placePos.y = 0;
+            grid.tiles[placePos.y][placePos.x] = BicycleMango::Next(APPLE);
+        }
+    }
+}
+
+void PlayerChangeMovementDirection_Act(WindowGameState& game, Mover& mover)
+{
+    for (auto& event : game.events[sf::Event::EventType::KeyPressed])
+    {
+        switch (event.key.code)
+        {
+            case sf::Keyboard::Key::W:
+            case sf::Keyboard::Key::Up:
+                mover.nextMove = Direction::NORTH;
+                break;
+            case sf::Keyboard::Key::D:
+            case sf::Keyboard::Key::Right:
+                mover.nextMove = Direction::EAST;
+                break;
+            case sf::Keyboard::Key::S:
+            case sf::Keyboard::Key::Down:
+                    mover.nextMove = Direction::SOUTH;
+                    break;
+            case sf::Keyboard::Key::A:
+            case sf::Keyboard::Key::Left:
+                mover.nextMove = Direction::WEST;
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+void SetupGrid_Act(Grid& grid)
+{
+    for (int row = 0; row < grid.rows; row++)
+    {
+        for (int col = 0; col < grid.cols; col++)
+        {
+            grid.tiles[row][col] = {EMPTY, 0};
+        }
+    }
+    grid.tiles[1][1] = {PLAYER, 0};
+    grid.tiles[grid.rows - 2][grid.cols - 2] = {SNAKE_HEAD, 0};
+}
+
+void TickMoveEvent_Act(MoveResolver& resolver)
+{
+    resolver.moveThisFrame = false;
+    if (resolver.moveTimer.getElapsedTime().asSeconds() >= resolver.timeBetweenMoves)
+    {
+        resolver.moveThisFrame = true;
+        resolver.moveTimer.restart();
+    }
+};
 
 void EvaluateMoves_Act(Grid& grid, Mover& mover, MoveResolver& resolver)
 {
