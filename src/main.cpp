@@ -62,18 +62,18 @@ int main()
     BicycleMango::Plan(PollWindowEvents::Id(), {FORAGE, 3});
     BicycleMango::Plan(TickMoveEvent::Id(), {FORAGE, 100});
     
-//         auto moverIsPlayer = 
-//     [](BicycleMango::PropTypeId propTypeId, Stage& stage) -> bool
-//     {
-//         if (BicycleMango::GetPropTypeId<Mover>() == propTypeId) 
-//             return stage.group == PLAYER;
-//         return true;
-//     };
-//     BicycleMango::Plan(PlayerChangeMovementDirection::Id(), {INPUT}, moverIsPlayer);
-//     BicycleMango::Plan(PlayerPlaceTiles::Id(), {INPUT}, moverIsPlayer);
+    auto moverIsPlayer = 
+    [](BicycleMango::PropTypeId propTypeId, const Stage& stage) -> bool
+    {
+        if (BicycleMango::GetPropTypeId<Mover>() == propTypeId) 
+            return stage.group == PLAYER;
+        return true;
+    };
+    BicycleMango::Plan(PlayerChangeMovementDirection::Id(), {INPUT}, moverIsPlayer);
+    BicycleMango::Plan(PlayerPlaceTiles::Id(), {INPUT}, moverIsPlayer);
     
-    BicycleMango::Plan(PlayerChangeMovementDirection::Id(), {INPUT}, [](Stage& stage){return stage.group == PLAYER;});
-    BicycleMango::Plan(PlayerPlaceTiles::Id(), {INPUT}, [](Stage& stage){return stage.group == PLAYER;});
+//     BicycleMango::Plan(PlayerChangeMovementDirection::Id(), {INPUT}, [](Stage& stage){return stage.group == PLAYER;});
+//     BicycleMango::Plan(PlayerPlaceTiles::Id(), {INPUT}, [](Stage& stage){return stage.group == PLAYER;});
     BicycleMango::Plan(EvaluateMoves::Id(), {UPDATE, 100});
     
     BicycleMango::Plan(DisplayWindow::Id(), {DISPLAY});

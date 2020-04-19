@@ -71,7 +71,6 @@ public:
         auto startTime = clock.getElapsedTime();
         for (const SunSchedule& schedule : schedules)
         {
-            //std::cout << SunLambdaRegistry::GetInstance().Get(schedule.id).name << std::endl;
             SunLambdaRegistry::GetInstance().Get(schedule.id)();
         }
 
@@ -100,8 +99,8 @@ public:
 
     using PropTypeId = size_t;
     using PropIdRaw = size_t;
-    // Can novel tuples be formed on this stage?
-    using CompatibleConstraint = std::function<bool(Stage&)>;
+    // ALL STAGES OF A PROP MUST RETURN TRUE ON THE COMPATIBILITY CONSTRAINT FOR THAT PROP TO BE CONSIDERED TO FORM PART OF A NOVEL TUPLE OF THE SunLambda::Id WHICH HAS THIS CompatibleConstraint AS PART OF ITS NovelTupleCreator
+    using CompatibleConstraint = std::function<bool(PropTypeId, const Stage&)>;
     // Provide a mapping from a prop considered for tuple to non consumed partial static
     using PartialStaticIndicators = std::unordered_map<PropTypeId, std::function<bool(SunLambda::Id, const Stage&)>>;
     
@@ -123,7 +122,7 @@ public:
     // This data structure is an augment of potential neighbors when searching for props to form novel tuples
     static inline std::unordered_map<SunLambda::Id, std::vector<std::vector<PropIdRaw>>> partialStatics;
     
-    static void Plan(SunLambda::Id id, const ScheduleSpecificity& specificity, CompatibleConstraint compatible = [](Stage& stage){return true;}, PartialStaticIndicators stageConstraints = {})
+    static void Plan(SunLambda::Id id, const ScheduleSpecificity& specificity, CompatibleConstraint compatible = [](PropTypeId, const Stage&){return true;}, PartialStaticIndicators stageConstraints = {})
     {
         SunSchedule schedule{id, specificity};
 
@@ -157,9 +156,9 @@ public:
         }
     };
 
-//     static inline std::unordered_map<PropTypeId, std::unordered_map<PropIdRaw, std::set<Stage, InstanceComparator>>> ptpsq; // Prop type prop stages query
+    static inline std::unordered_map<PropTypeId, std::unordered_map<PropIdRaw, std::set<Stage, InstanceComparator>>> ptpsq; // Prop type prop stages query
     // SHOULD WE ONLY STORE THIS INFORMATION FOR PARTIAL STATICS OR EVERYTHING???
-    static inline std::unordered_map<PropTypeId, std::unordered_map<Group, std::unordered_map<Instance, std::set<PropIdRaw>>>> ptgid;
+//     static inline std::unordered_map<PropTypeId, std::unordered_map<Group, std::unordered_map<Instance, std::set<PropIdRaw>>>> ptgid;
     
     struct GlobalPropId {PropTypeId typeId;PropIdRaw id;};
     friend inline bool operator< (const GlobalPropId& lhs, const GlobalPropId& rhs){ return lhs.typeId < rhs.typeId && lhs.id < rhs.id; }
@@ -172,11 +171,11 @@ public:
     static inline std::unordered_map<PropTypeId, std::set<Typeset>> mappedPropTupleTypesets;
     static inline std::set<Typeset> globalPropTupleTypesets;
 
-    // Each typeset stores a map of types to props which have been added and have not been formed into novel tuples of this typeset yet
+    // Each typeset stores a map of types to props which have been added and have not been formed into novel tuples of this SunLambda typeset yet
     // Partial static indicators that return true
-    static inline std::map<Typeset, std::unordered_map<PropTypeId, std::vector<PropIdRaw>>> stagingPropTuples;
+    static inline std::map<SunLambda::Id, std::unordered_map<PropTypeId, std::vector<PropIdRaw>>> stagingPropTuples;
     
-    static inline std::map<Typeset, std::vector<std::vector<GlobalPropId>>> novelTuples;
+    static inline std::map<SunLambda::Id, std::vector<std::vector<GlobalPropId>>> novelTuples;
     static inline std::unordered_map<SunLambda::Id, Typeset> sunLambdaTypesets;
     static inline std::map<Typeset, std::vector<SunLambda::Id>> typesetSunLambdas;
 
@@ -226,8 +225,8 @@ public:
     static void AddPropStage(PropId<PropType> propId, const Stage& stage)
     {
         instanceBuffer[stage.group].nextId = stage.instance + 1; // This is kind of a hack, and could cause some large sections of unused ids potentially but I think it will work
-//         ptpsq[GetPropTypeId<PropType>()][propId.id].insert(stage);
-        ptgid[GetPropTypeId<PropType>()][stage.group][stage.instance].insert(propId.id);
+        ptpsq[GetPropTypeId<PropType>()][propId.id].insert(stage);
+//         ptgid[GetPropTypeId<PropType>()][stage.group][stage.instance].insert(propId.id);
     }
 
     template<typename PropType>
@@ -258,110 +257,148 @@ public:
         
         auto propTypeId = GetPropTypeId<PropType>();
         auto typesetsWithAddedPropType = BicycleMango::mappedPropTupleTypesets[propTypeId];
-                        
+        
+        // ---
         for (auto typeset_it = typesetsWithAddedPropType.begin(); typeset_it != typesetsWithAddedPropType.end(); ++typeset_it)
         {
-            // Check if a novel tuple is formed with this prop from the staged prop neighbors of each Typeset that propTypeId is in!
-            // Should partial statics be part of potentialNeighbors? NO, because then we'd have to copy rather than using a ref
-            std::unordered_map<PropTypeId, std::vector<PropIdRaw>>& potentialNeighbors = BicycleMango::stagingPropTuples[(*typeset_it)];
-            std::unordered_map<PropTypeId, std::vector<PropIdRaw>> compatibleNeighbors;
-            bool novelTupleRuledOut = false;
-            
-            // We need to make sure that potentialNeighbors has at least one prop of each type in this typeset other than the type of prop being added, otherwise we can rule out creating a novel tuple
-            for (PropTypeId ptid : (*typeset_it))
+            for (auto sunlambda_it = typesetSunLambdas[(*typeset_it)].begin();
+                 sunlambda_it != typesetSunLambdas[(*typeset_it)].end(); 
+                ++sunlambda_it)
             {
-                if (ptid != propTypeId && potentialNeighbors[ptid].empty())
+        // --- 'for each SunLambda that PropType is a parameter of'
+                
+                // Check if a novel tuple is formed with this prop from the staged prop neighbors of each SunLambda that propTypeId is in!
+                // Partial statics are not considered as potentialNeighbors because then we'd have to copy the stagingPropTuples vector rather than using a ref
+                std::unordered_map<PropTypeId, std::vector<PropIdRaw>>& potentialNeighbors = BicycleMango::stagingPropTuples[(*sunlambda_it)];
+                // However, both potential neighbors AND partial statics will be added to compatibleNeighbors later in this function
+                std::unordered_map<PropTypeId, std::vector<PropIdRaw>> compatibleNeighbors;
+                bool novelTupleRuledOut = false;
+                
+                // We need to make sure that potentialNeighbors has at least one prop of each type in this SunLambda::Id other than the type of prop being added, otherwise we can rule out creating a novel tuple
+                int i = 0; // Implied type index
+                for (PropTypeId ptid : (*typeset_it))
                 {
-                    novelTupleRuledOut = true;
-                    break;
-                }
-            }
-//             std::cout << "Poential neighbors are " << potentialNeighbors.size() << std::endl;
-            if (!novelTupleRuledOut)
-            {
-                for (auto ptid_it = potentialNeighbors.begin(); ptid_it != potentialNeighbors.end(); ++ptid_it)
-                {
-                    if ((*ptid_it).first != propTypeId) // is prop of other type
+                    if (ptid != propTypeId && potentialNeighbors[ptid].empty())
                     {
-                        // TODO: Do they share a stage?
-                        // TODO: Do they have no differing stages of shared groups?
-                        // Store which props are not part of novel tuples yet and only search through those, UNLESS a prop has multiple instances of a group
-                        
-                        for (auto neighborId : (*ptid_it).second)
+                        bool foundPartialStatic = false;
+                        for (auto& PartialStaticVector : partialStatics[(*sunlambda_it)])
                         {
-                            //TODO For each SunLambda Id in Typeset, track if it is compatible with this tuple
-                            if (ArePropsCompatible({propTypeId, id}, {(*ptid_it).first, neighborId}))
+                            for (PropIdRaw& partialStatic : partialStatics[(*sunlambda_it)][i])
                             {
-                                compatibleNeighbors[(*ptid_it).first].push_back(neighborId);
+                                bool partialStaticFulfillsCompatibilityConstraint = true;
+                                for (const Stage& stage : ptpsq[ptid][partialStatic]) // Can we iterate like this or do we need to use an iterator??
+                                {
+                                    if (!novelTupleCreators[(*sunlambda_it)].compatible(ptid, stage))
+                                    {
+                                        partialStaticFulfillsCompatibilityConstraint = false;
+                                        break;
+                                    }
+                                }
+                                if (partialStaticFulfillsCompatibilityConstraint)
+                                {
+                                    compatibleNeighbors[ptid].push_back(partialStatic);
+                                    foundPartialStatic = true;
+                                    break;
+                                }
                             }
                         }
-                        if (compatibleNeighbors[(*ptid_it).first].empty()) 
+                        if (!foundPartialStatic)
                         {
                             novelTupleRuledOut = true;
-                            break; // No compatible neighbors of ptid to pair with
+                            break;
                         }
                     }
+                    i++;
                 }
-            }
-            // Compatible neighbors is now populated with props that are compatible with our added prop, but not each other
-            std::vector<GlobalPropId> novelTuple;
-            
-            if (!novelTupleRuledOut)
-            {
-                for (auto ptid_it = compatibleNeighbors.begin(); ptid_it != compatibleNeighbors.end(); ++ptid_it)
+                
+                if (!novelTupleRuledOut)
                 {
-//                     std::cout << "Check for compatible neighbors" << std::endl;
-                    if ((*ptid_it).first != propTypeId) // is prop of other type
+//                     for (PropTypeId& typeId : (*typeset_it))
+//                     {
+//                         Do we need to check each of the neighbors or ONLY the prop being added for a compatability constraint
+//                         NEVER ADD TO STAGING (POTENTIAL NEIGHBORS) IF ANY STAGE OF A COMPATABILITY CONSTRAINT RETURNS FALSE
+//                         TODO Replace {0, 0} with a for each stage of potentialNeighbors if ANY return false then it is not compatible
+//                         novelTupleCreators[(*sunlambda_it)].compatible(typeId, {0, 0});
+//                     }
+                    for (auto ptid_it = potentialNeighbors.begin(); ptid_it != potentialNeighbors.end(); ++ptid_it)
                     {
-                        // TODO Below needs to be updated to not pick the last available always once compatability is implemented!
-                        PropIdRaw chosenProp = (*ptid_it).second.back(); // Just pick the last available compatible one
-                        novelTuple.push_back({(*ptid_it).first, chosenProp});
-//                         std::cout << "Add to novel tuple" << std::endl;
-                        // Need to remove this from potentialNeighbors if it should not be part of multiple tuples of this typeset
-                        // TODO: How to determine if a neighbor should be allowed to be reused (and not consumed)
-                        bool isPartialStatic = false;
-                        if (!isPartialStatic)
+                        if ((*ptid_it).first != propTypeId) // is prop type different than the one being added
                         {
-                            // We should only remove props if a novel tuple is formed
-                            potentialNeighbors[(*ptid_it).first].pop_back();
+                            for (auto neighborId : (*ptid_it).second)
+                            {
+                                //TODO For each SunLambda Id in Typeset, track if it is compatible with this tuple
+//                                 for (auto& stage : 
+                                if (ArePropsCompatible({propTypeId, id}, {(*ptid_it).first, neighborId}))
+                                {
+                                    compatibleNeighbors[(*ptid_it).first].push_back(neighborId);
+                                }
+                            }
+                            if (compatibleNeighbors[(*ptid_it).first].empty()) 
+                            {
+                                novelTupleRuledOut = true;
+                                break; // No compatible neighbors of ptid to pair with
+                            }
                         }
                     }
                 }
-                for (auto& sunId : typesetSunLambdas[(*typeset_it)])
-                {
-//                     std::cout << "Formed novel tuple of " << SunLambdaRegistry::GetInstance().Get(sunId).name << std::endl;
-                }
+                // Compatible neighbors is now populated with props that are compatible with our added prop, but not each other
+                std::vector<GlobalPropId> novelTuple;
                 
-                // The prop that we're adding should be included in the novel tuple! Hooray!
-                novelTuple.push_back({propTypeId, id});
-                // The prop that we're adding should be removed from potential neighbors
-//                 std::cout << "Inserting novel tuple of " << novelTuple.size() << " size" << std::endl;
-                novelTuples[(*typeset_it)].push_back(novelTuple);
-                
-                // This could be optimized with an emerge only sunLambdaTypesets data structure
-                for (auto emergesun_it = emerges.begin(); emergesun_it != emerges.end(); ++emergesun_it)
+                if (!novelTupleRuledOut)
                 {
-                    if (sunLambdaTypesets[(*emergesun_it)] == (*typeset_it))
+                    for (auto ptid_it = compatibleNeighbors.begin(); ptid_it != compatibleNeighbors.end(); ++ptid_it)
                     {
-                        // Why are you doing this below lol, this is calling iterate props
-//                         SunLambdaRegistry::GetInstance().Get((*emergesun_it))();
-                        std::vector<PropIdRaw> sunData(novelTuple.size()); // The SunLambda already knows the types in order, therefore we only need pass it the PropIdRaw values and it can imply the types
-                        for (GlobalPropId& gpid : novelTuple)
-                            sunData.push_back(gpid.id);
-                        SunLambda& sun = SunLambdaRegistry::GetInstance().Get(*(emergesun_it));
-                        sun.Emerge(sunData);
-                        // TODO Use constraints instead of consuming the emerge, probably
-                        emerges.erase(emergesun_it); // Consume emerge!?
-                        break;
+    //                     std::cout << "Check for compatible neighbors" << std::endl;
+                        if ((*ptid_it).first != propTypeId) // is prop of other type
+                        {
+                            // TODO Below needs to be updated to not pick the last available always once compatability is implemented!
+                            PropIdRaw chosenProp = (*ptid_it).second.back(); // Just pick the last available compatible one
+                            novelTuple.push_back({(*ptid_it).first, chosenProp});
+    //                         std::cout << "Add to novel tuple" << std::endl;
+                            // Need to remove this from potentialNeighbors if it should not be part of multiple tuples of this typeset
+                            // TODO: How to determine if a neighbor should be allowed to be reused (and not consumed)
+                            bool isPartialStatic = false;
+                            if (!isPartialStatic)
+                            {
+                                // We should only remove props if a novel tuple is formed
+                                potentialNeighbors[(*ptid_it).first].pop_back();
+                            }
+                        }
                     }
+//                     std::cout << "Formed novel tuple of " << SunLambdaRegistry::GetInstance().Get((*sunlambda_it)).name << std::endl;
+                    
+                    // The prop that we're adding should be included in the novel tuple! Hooray!
+                    novelTuple.push_back({propTypeId, id});
+                    // The prop that we're adding should be removed from potential neighbors
+    //                 std::cout << "Inserting novel tuple of " << novelTuple.size() << " size" << std::endl;
+                    novelTuples[(*sunlambda_it)].push_back(novelTuple);
+                    
+                    // This could be optimized with an emerge only sunLambdaTypesets data structure
+                    for (auto emergesun_it = emerges.begin(); emergesun_it != emerges.end(); ++emergesun_it)
+                    {
+                        if (sunLambdaTypesets[(*emergesun_it)] == (*typeset_it))
+                        {
+                            // Why are you doing this below lol, this is calling iterate props
+    //                         SunLambdaRegistry::GetInstance().Get((*emergesun_it))();
+                            std::vector<PropIdRaw> sunData(novelTuple.size()); // The SunLambda already knows the types in order, therefore we only need pass it the PropIdRaw values and it can imply the types
+                            for (GlobalPropId& gpid : novelTuple)
+                                sunData.push_back(gpid.id);
+                            SunLambda& sun = SunLambdaRegistry::GetInstance().Get(*(emergesun_it));
+                            sun.Emerge(sunData);
+                            // TODO Use constraints instead of consuming the emerge, probably
+                            emerges.erase(emergesun_it); // Consume emerge!?
+                            break;
+                        }
+                    }
+                    
+                } 
+                else
+                {
+                    // TODO Only add to potential neighbors if compatability constraint is satisfied
+                    BicycleMango::stagingPropTuples[(*sunlambda_it)][propTypeId].push_back(id);
                 }
-                
-            } 
-            else
-            {
-                BicycleMango::stagingPropTuples[(*typeset_it)][propTypeId].push_back(id);
-            }
-        }
+            } // --- end sunlambda_it
+        } // --- end typeset_it
 
         return &prop;
     }
@@ -401,7 +438,7 @@ private:
     template <typename ... PTypes, std::size_t ... Is>
     static auto IterateProps(void (*functor)(PTypes...), const SunLambda::Id& id, std::index_sequence<Is...> seq)
     {
-        for (auto& tuple : novelTuples[sunLambdaTypesets[id]])
+        for (auto& tuple : novelTuples[id])
         {
             functor(GetProps<std::decay_t<PTypes>>()[tuple[Is].id]...);
         }
