@@ -1,0 +1,8 @@
+# store any versioned builds or other unused files locally
+archive
+# cmake should build to this directory
+build
+
+*.kdev4
+*.sublime*
+*.kate*
