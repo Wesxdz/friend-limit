@@ -54,6 +54,7 @@ struct Grid : Prop
     static const int tile_height = 10;
     static constexpr int offset_y = tile_height * 2;
     Stage tiles[rows][cols];
+    sf::Sound placeApple;
 };
 
 struct MoveResolver : Prop
@@ -61,6 +62,8 @@ struct MoveResolver : Prop
     float timeBetweenMoves = 0.25f;
     sf::Clock moveTimer;
     bool moveThisFrame = false;
+    sf::Sound beatSFX;
+    int beatsCount;
     // If two Movers try to move to the same pos, we need to resolve this appropriately depending on the groups
 //     std::unordered_map<sf::Vector2i, std::vector<sf::Vector2i>> requestedMoves; // to->froms
 };

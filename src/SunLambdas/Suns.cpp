@@ -14,7 +14,14 @@ void PlayerPlaceTiles_Act(WindowGameState& game, Grid& grid, Mover& mover)
             sf::Vector2i placePos = mover.pos;
             placePos.y++;
             if (placePos.y == grid.rows) placePos.y = 0;
-            grid.tiles[placePos.y][placePos.x] = BicycleMango::Next(APPLE);
+            if (grid.tiles[placePos.y][placePos.x].group == EMPTY)
+            {
+                if (grid.placeApple.getPlayingOffset().asSeconds() == 0.0f)
+                {
+                    grid.placeApple.play();
+                }
+                grid.tiles[placePos.y][placePos.x] = BicycleMango::Next(APPLE);
+            }
         }
     }
 }
@@ -58,6 +65,7 @@ void SetupGrid_Act(Grid& grid)
     }
     grid.tiles[1][1] = {PLAYER, 0};
     grid.tiles[grid.rows - 2][grid.cols - 2] = {SNAKE_HEAD, 0};
+    grid.placeApple.setBuffer(*Resources::inst->LoadSoundBuffer("place-apple.wav"));
 }
 
 void TickMoveEvent_Act(MoveResolver& resolver)
@@ -65,6 +73,13 @@ void TickMoveEvent_Act(MoveResolver& resolver)
     resolver.moveThisFrame = false;
     if (resolver.moveTimer.getElapsedTime().asSeconds() >= resolver.timeBetweenMoves)
     {
+        resolver.beatsCount++;
+        if (resolver.beatsCount % 4 == 0)
+        {
+            resolver.beatSFX.play();
+            resolver.beatSFX.setVolume(10.0f);
+            resolver.beatSFX.setPitch(0.7f);
+        }
         resolver.moveThisFrame = true;
         resolver.moveTimer.restart();
     }

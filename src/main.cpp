@@ -12,6 +12,14 @@ int main()
     srand(time(NULL));
     Resources::inst = new Resources();
     
+//     sf::Music soundtrack;
+//     if (!soundtrack.openFromFile("resources/sounds/distant-friend.ogg"))
+//     {
+//         std::cout <<"Soundtrack failed to load" << std::endl;
+//     }
+//     soundtrack.setLoop(true);
+//     soundtrack.play();
+    
     BicycleMango::Emerge(SetupGrid::Id(), {}, {});
     
     auto game = BicycleMango::AddProp<WindowGameState>({{GAME_STATE, 0}}); // I want to specify that this prop can be reused in multiple novel tuples
@@ -38,20 +46,21 @@ int main()
     stats->swordsAnchorPos = {84, 7};
     
     auto grid = BicycleMango::AddProp<Grid>({});
-    BicycleMango::AddProp<MoveResolver>({});
+    auto moveResolver = BicycleMango::AddProp<MoveResolver>({});
+    moveResolver->beatSFX.setBuffer(*Resources::inst->LoadSoundBuffer("beat.wav"));
     
     auto playerMover = BicycleMango::AddProp<Mover>({{PLAYER, 0}});
     playerMover->pos = {1, 1};
     playerMover->prevMove = playerMover->nextMove = Direction::SOUTH;
     
     // TODO Variadic stages for AddProp
-    auto snakeMover = BicycleMango::AddProp<Mover>({{SNAKE, 0}, {SNAKE_HEAD, 0}});
-    snakeMover->pos = {grid->cols - 2, grid->rows - 2};
-    snakeMover->prevMove = snakeMover->nextMove = Direction::NORTH;
+//     auto snakeMover = BicycleMango::AddProp<Mover>({{SNAKE, 0}, {SNAKE_HEAD, 0}});
+//     snakeMover->pos = {grid->cols - 2, grid->rows - 2};
+//     snakeMover->prevMove = snakeMover->nextMove = Direction::NORTH;
     
     // Suns
     BicycleMango::Plan(PollWindowEvents::Id(), {FORAGE, 3});
-//     BicycleMango::Plan(TickMoveEvent::Id(), {FORAGE, 100});
+    BicycleMango::Plan(TickMoveEvent::Id(), {FORAGE, 100});
     
 //         auto moverIsPlayer = 
 //     [](BicycleMango::PropTypeId propTypeId, Stage& stage) -> bool
