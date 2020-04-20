@@ -57,12 +57,12 @@ struct SunLambda // λ
     Functor functor = nullptr;
     const char* name = nullptr;
 
-    void operator() (const Stage& stage = {}) const
+    void operator() () const
     {
-        Act(stage);
+        Act();
     }
 
-    void Act(const Stage& stage = {}) const
+    void Act() const
     {
         (*caller)(*this);
     }

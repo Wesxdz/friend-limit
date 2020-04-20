@@ -17,7 +17,7 @@ DeclareSunLambda(PlayerPlaceTiles, WindowGameState&, Grid&, Mover&);
 DeclareSunLambda(PlayerChangeMovementDirection, WindowGameState&, Mover&);
 DeclareSunLambda(TickMoveEvent, MoveResolver&);
 // Declare MoveResolver and Grid can be reused with PartialStaticIndicators
-DeclareSunLambda(EvaluateMoves, Grid&, Mover&, MoveResolver&);
+DeclareSunLambda(EvaluateMoves, Grid&, MoveResolver&, Mover&);
 
 DeclareSunLambda(SetupGrid, Grid&);
 DeclareSunLambda(RenderGrid, WindowGameState&, Grid&);

@@ -85,7 +85,7 @@ void TickMoveEvent_Act(MoveResolver& resolver)
     }
 };
 
-void EvaluateMoves_Act(Grid& grid, Mover& mover, MoveResolver& resolver)
+void EvaluateMoves_Act(Grid& grid, MoveResolver& resolver, Mover& mover)
 {
     if (!resolver.moveThisFrame) return;
     // TODO: All these fucking moves MAY need to be evaluated simultaneously rather than sequentially

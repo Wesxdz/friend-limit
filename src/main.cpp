@@ -20,7 +20,37 @@ int main()
 //     soundtrack.setLoop(true);
 //     soundtrack.play();
     
-    BicycleMango::Emerge(SetupGrid::Id(), {}, {});
+    BicycleMango::Emerge(SetupGrid::Id());
+    
+    // Suns
+    // SUNS MUST BE PLANNED BEFORE ADDING PROPS SO THAT THERE IS A NON-NULL COMPATABILITY CONSTRANT CURRENTLY
+    // What should probably be done instead is only require adding compatability constraints before adding props, not necessarily all planning
+    BicycleMango::Plan(PollWindowEvents::Id(), {FORAGE, 3});
+    BicycleMango::Plan(TickMoveEvent::Id(), {FORAGE, 100});
+    
+    auto moverIsPlayer = 
+    [](BicycleMango::PropTypeId propTypeId, const Stage& stage) -> bool
+    {
+        if (BicycleMango::GetPropTypeId<Mover>() == propTypeId) 
+            return stage.group == PLAYER;
+        return true;
+    };
+    BicycleMango::Plan(PlayerChangeMovementDirection::Id(), {INPUT}, moverIsPlayer);
+    BicycleMango::Plan(PlayerPlaceTiles::Id(), {INPUT}, moverIsPlayer);
+    BicycleMango::Plan(EvaluateMoves::Id(), {UPDATE, 100}, BicycleMango::All);
+    // TODO: More convenient way to add partial statics
+    BicycleMango::novelTupleCreators[EvaluateMoves::Id()].stageConstraints[BicycleMango::GetPropTypeId<Grid>()] = [](const Stage&){return true;};
+    BicycleMango::novelTupleCreators[EvaluateMoves::Id()].stageConstraints[BicycleMango::GetPropTypeId<MoveResolver>()] = [](const Stage&){return true;};
+    BicycleMango::Plan(DisplayWindow::Id(), {DISPLAY});
+    BicycleMango::Plan(SpriteRenderer::Id(), {RENDER});
+    BicycleMango::Plan(DisplayUpdateStats::Id(), {RENDER, 10});
+    BicycleMango::Plan(RenderGrid::Id(), {RENDER, 5});
+
+#ifdef HOT_RELOAD
+    BicycleMango::Plan(HotReloadWatcher::Id(), {UPDATE});
+#endif
+    
+    // Props
     
     auto game = BicycleMango::AddProp<WindowGameState>({{GAME_STATE, 0}}); // I want to specify that this prop can be reused in multiple novel tuples
     // More generically, I want to specify that ANY prop of WindowGameState can be reused in multiple novel tuples on GAME_STATE
@@ -45,45 +75,18 @@ int main()
     stats->swords.setFillColor(sf::Color(148, 0, 255));
     stats->swordsAnchorPos = {84, 7};
     
-    auto grid = BicycleMango::AddProp<Grid>({});
-    auto moveResolver = BicycleMango::AddProp<MoveResolver>({});
+    auto grid = BicycleMango::AddProp<Grid>({{GAME_STATE, 0}});
+    auto moveResolver = BicycleMango::AddProp<MoveResolver>({{GAME_STATE, 0}});
     moveResolver->beatSFX.setBuffer(*Resources::inst->LoadSoundBuffer("beat.wav"));
+    
+    // TODO Variadic stages for AddProp
+    auto snakeMover = BicycleMango::AddProp<Mover>({{SNAKE, 0}, {SNAKE_HEAD, 0}});
+    snakeMover->pos = {grid->cols - 2, grid->rows - 2};
+    snakeMover->prevMove = snakeMover->nextMove = Direction::NORTH;
     
     auto playerMover = BicycleMango::AddProp<Mover>({{PLAYER, 0}});
     playerMover->pos = {1, 1};
     playerMover->prevMove = playerMover->nextMove = Direction::SOUTH;
-    
-    // TODO Variadic stages for AddProp
-//     auto snakeMover = BicycleMango::AddProp<Mover>({{SNAKE, 0}, {SNAKE_HEAD, 0}});
-//     snakeMover->pos = {grid->cols - 2, grid->rows - 2};
-//     snakeMover->prevMove = snakeMover->nextMove = Direction::NORTH;
-    
-    // Suns
-    BicycleMango::Plan(PollWindowEvents::Id(), {FORAGE, 3});
-    BicycleMango::Plan(TickMoveEvent::Id(), {FORAGE, 100});
-    
-    auto moverIsPlayer = 
-    [](BicycleMango::PropTypeId propTypeId, const Stage& stage) -> bool
-    {
-        if (BicycleMango::GetPropTypeId<Mover>() == propTypeId) 
-            return stage.group == PLAYER;
-        return true;
-    };
-    BicycleMango::Plan(PlayerChangeMovementDirection::Id(), {INPUT}, moverIsPlayer);
-    BicycleMango::Plan(PlayerPlaceTiles::Id(), {INPUT}, moverIsPlayer);
-    
-//     BicycleMango::Plan(PlayerChangeMovementDirection::Id(), {INPUT}, [](Stage& stage){return stage.group == PLAYER;});
-//     BicycleMango::Plan(PlayerPlaceTiles::Id(), {INPUT}, [](Stage& stage){return stage.group == PLAYER;});
-    BicycleMango::Plan(EvaluateMoves::Id(), {UPDATE, 100});
-    
-    BicycleMango::Plan(DisplayWindow::Id(), {DISPLAY});
-    BicycleMango::Plan(SpriteRenderer::Id(), {RENDER});
-    BicycleMango::Plan(DisplayUpdateStats::Id(), {RENDER, 10});
-    BicycleMango::Plan(RenderGrid::Id(), {RENDER, 5});
-
-#ifdef HOT_RELOAD
-    BicycleMango::Plan(HotReloadWatcher::Id(), {UPDATE});
-#endif
     
     while (!BicycleMango::brake)
     {
