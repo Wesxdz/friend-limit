@@ -92,5 +92,7 @@ struct Mover : Prop
 
 struct SnakeAI : Prop
 {
-    static inline std::unordered_map<Group, int> magnets = {{PEASANT, 100}, {KNIGHT, 70}, {HERO, 80}, {APPLE, 150}, {PLAYER, 100}};
+    std::vector<sf::Vector2i> snakeParts;
+    // TODO Non static
+    static inline std::unordered_map<Group, int> magnets = {{SNAKE_TAIL, -100}, {SNAKE_BODY, -200}, {PEASANT, 100}, {KNIGHT, 70}, {HERO, 80}, {APPLE, 150}, {PLAYER, 100}};
 };

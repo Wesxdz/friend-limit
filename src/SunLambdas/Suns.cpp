@@ -111,18 +111,22 @@ void MoverDirectionChoiceAI_Act(Grid& grid, Mover& mover)
             if (SnakeAI::magnets.count(b.occupying.group)) b.prio = SnakeAI::magnets[b.occupying.group];
             return a.prio > b.prio;
         });
-        return prioritySelect[0];
+        // Choose random when there are multiple best move options that tie for the highest priority
+        std::vector<MoveOption> bestChoices;
+        bestChoices.push_back(prioritySelect[0]);
+        for (size_t i = 1; i < prioritySelect.size(); i++)
+        {
+            if (prioritySelect[i].prio == bestChoices[0].prio)
+            {
+                bestChoices.push_back(prioritySelect[i]);
+            }
+        }
+        return bestChoices[rand() % bestChoices.size()];
     };
     if (stage.group == SNAKE_HEAD)
     {
         MoveOption bestChoice = Priority(moveOptions);
-        if (bestChoice.prio == 0)
-        {
-            mover.nextMove = moveOptions[rand() % moveOptions.size()].direction;
-        } else
-        {
-            mover.nextMove = bestChoice.direction;
-        }
+        mover.nextMove = bestChoice.direction;
     }
 }
 
@@ -151,18 +155,75 @@ void EvaluateMoves_Act(Grid& grid, MoveResolver& resolver, Mover& mover)
     resolver.requestedMoves.push_back({mover.pos, moveToPos, mover.id});
 };
 
-void ResolveMoves_Act(MoveResolver& resolver, Grid& grid)
+void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai)
 {
     if (!resolver.moveThisFrame) return;
     // TODO Sort by priority
     for (MoveResolver::MoveRequest& request : resolver.requestedMoves)
     {
         Stage current = grid.tiles[request.from.y][request.from.x];
-        grid.tiles[request.from.y][request.from.x] = {EMPTY, 0};
-        
-        // TODO: Respond to event
-        
-        grid.tiles[request.to.y][request.to.x] = current;
+        Stage hit = grid.tiles[request.to.y][request.to.x];
+        // TODO Respond to all stages interaction
+        if (current.group == SNAKE_HEAD)
+        {
+            if (hit.group == PLAYER)
+            {
+                std::cout << "GAME OVER!" << std::endl;
+            }
+            bool growSnake = hit.group == APPLE;
+            if (growSnake)
+            {
+                // Decide if we need to spawn a tail or body part
+                if (ai.snakeParts.size() == 1)
+                {
+                    std::cout << "Spawn snake tail" << std::endl;
+                    grid.tiles[request.from.y][request.from.x] = BicycleMango::Next(SNAKE_TAIL);
+                    ai.snakeParts.push_back({request.from.x, request.from.y});
+                    grid.tiles[request.to.y][request.to.x] = current;
+                } else
+                {
+                    std::cout << "Spawn snake body" << std::endl;
+                    grid.tiles[request.from.y][request.from.x] = BicycleMango::Next(SNAKE_BODY);
+                    ai.snakeParts.insert(ai.snakeParts.begin() + 1, {request.from.x, request.from.y});
+                }
+                // When the snake grows, we don't update the movement of the entire snake: only the head
+                grid.tiles[request.to.y][request.to.x] = current;
+            } else
+            {
+                sf::Vector2i prevPartPos = request.from;
+                grid.tiles[request.from.y][request.from.x] = {EMPTY, 0};
+                grid.tiles[request.to.y][request.to.x] = current;
+                for (size_t p = 1; p < ai.snakeParts.size(); p++)
+                {
+                    sf::Vector2i followPos = ai.snakeParts[p];
+                    ai.snakeParts[p] = prevPartPos;
+                    grid.tiles[prevPartPos.y][prevPartPos.x] = grid.tiles[followPos.y][followPos.x];
+                    grid.tiles[followPos.y][followPos.x] = {EMPTY, 0}; // Only really need to do this for the tail
+                    prevPartPos = followPos;
+                }
+            }
+        } 
+        else if (current.group == PLAYER)
+        {
+            if (hit.group == SNAKE_HEAD)
+            {
+                std::cout << "GAME OVER!" << std::endl;
+            }
+            const std::set<Group> playerBlockedBy = {SNAKE_BODY, SNAKE_TAIL, KNIGHT, PEASANT, HERO};
+            if (playerBlockedBy.count(hit.group))
+            {
+                
+            } else
+            {
+                grid.tiles[request.from.y][request.from.x] = {EMPTY, 0};
+                grid.tiles[request.to.y][request.to.x] = current;
+            }
+        }
+        else
+        {
+            grid.tiles[request.from.y][request.from.x] = {EMPTY, 0};
+            grid.tiles[request.to.y][request.to.x] = current;
+        }
         // TODO If the move was successful!
         BicycleMango::GetProps<Mover>()[request.moverId].pos = request.to;
     }

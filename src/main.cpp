@@ -91,6 +91,9 @@ int main()
     snakeMover->pos = {grid->cols - 2, grid->rows - 2};
     snakeMover->prevMove = snakeMover->nextMove = Direction::NORTH;
     
+    auto snakeAI = BicycleMango::AddProp<SnakeAI>({{SNAKE, 0}});
+    snakeAI->snakeParts.push_back(snakeMover->pos);
+    
     auto playerMover = BicycleMango::AddProp<Mover>({{PLAYER, 0}, {GAME_STATE, 0}});
     playerMover->pos = {1, 1};
     playerMover->prevMove = playerMover->nextMove = Direction::SOUTH;
