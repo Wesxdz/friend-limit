@@ -189,6 +189,7 @@ enum LOOP_TIMES : uint8_t
     FORAGE,
     NETWORK_RECEIVE,
     INPUT,
+    AI,
     UPDATE,
     EVENTS,
     NETWORK_SEND,

@@ -3,6 +3,7 @@
 #include "sun_lambda.h"
 #include <SFML/Graphics.hpp>
 #include "resources.h"
+#include "bicycle_mango.h"
 
 struct WindowGameState : Prop
 {
@@ -54,6 +55,8 @@ struct Grid : Prop
     static const int tile_height = 10;
     static constexpr int offset_y = tile_height * 2;
     Stage tiles[rows][cols];
+    std::set<Group> shouldGroupWrap = {PLAYER, PEASANT, HERO};
+    
     sf::Sound placeApple;
 };
 
@@ -65,7 +68,16 @@ struct MoveResolver : Prop
     sf::Sound beatSFX;
     int beatsCount;
     // If two Movers try to move to the same pos, we need to resolve this appropriately depending on the groups
-//     std::unordered_map<sf::Vector2i, std::vector<sf::Vector2i>> requestedMoves; // to->froms
+    struct MoveRequest
+    {
+        sf::Vector2i from;
+        sf::Vector2i to;
+        BicycleMango::PropIdRaw moverId;
+    };
+    std::vector<MoveRequest> requestedMoves;
+    // We need to resolve moves by having the higher priority moves happen first in case two things try to move onto the same tile
+    // For example, SNAKE_HEAD should move onto a tile after KNIGHT or PLAYER
+    std::map<Group, int> movePriority = {{SNAKE_HEAD, 50}, {SNAKE_BODY, 40}, {SNAKE_TAIL, 30}, {PEASANT, 60}, {KNIGHT, 70}, {HERO, 80}, {PLAYER, 100}};
 };
 
 #include "Direction.h"

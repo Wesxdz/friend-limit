@@ -83,37 +83,57 @@ void TickMoveEvent_Act(MoveResolver& resolver)
         resolver.moveThisFrame = true;
         resolver.moveTimer.restart();
     }
-};
+}
+
+// TODO Refactor into multiple AI with compatibility constraints
+void MoverDirectionChoiceAI_Act(Grid& grid, Mover& mover)
+{
+    Stage stage = grid.tiles[mover.pos.y][mover.pos.x];
+    if (stage.group == SNAKE_HEAD)
+    {
+        
+    }
+}
 
 void EvaluateMoves_Act(Grid& grid, MoveResolver& resolver, Mover& mover)
 {
     if (!resolver.moveThisFrame) return;
-    // TODO: All these fucking moves MAY need to be evaluated simultaneously rather than sequentially
-    Stage current = grid.tiles[mover.pos.y][mover.pos.x];
-    // Only evaluate the move IF the mover can move there
-    // The SNAKE can always move
-    // For example, two KNIGHT group movers CANNOT move onto the same tile
-    grid.tiles[mover.pos.y][mover.pos.x] = {EMPTY, 0};
-    auto moveVec = Movement::GetOffsetVector(mover.nextMove);
-    // TODO Resolve if moving onto non empty tile, otherwise pick a new movement or do nothing
-    mover.pos += {moveVec.x, moveVec.y};
-    // Player wrap around
-    if (mover.pos.x == grid.cols) 
+    // Movers don't always actually move, but they always try to move
+    sf::Vector2i moveToPos = mover.pos + Movement::GetOffsetVector(mover.nextMove);
+    if (grid.shouldGroupWrap.count(grid.tiles[mover.pos.y][mover.pos.x].group))
     {
-        mover.pos.x = 0;
-    } else if (mover.pos.x == -1)
-    {
-        mover.pos.x = grid.cols - 1;
+        if (moveToPos.x == grid.cols) 
+        {
+            moveToPos.x = 0;
+        } else if (moveToPos.x == -1)
+        {
+            moveToPos.x = grid.cols - 1;
+        }
+        if (moveToPos.y == grid.rows) 
+        {
+            moveToPos.y = 0;
+        } else if (moveToPos.y == -1)
+        {
+            moveToPos.y = grid.rows - 1;
+        }
     }
-    if (mover.pos.y == grid.rows) 
-    {
-        mover.pos.y = 0;
-    } else if (mover.pos.y == -1)
-    {
-        mover.pos.y = grid.rows - 1;
-    }
-    grid.tiles[mover.pos.y][mover.pos.x] = current;
+    resolver.requestedMoves.push_back({mover.pos, moveToPos, mover.id});
 };
+
+void ResolveMoves_Act(MoveResolver& resolver, Grid& grid)
+{
+    if (!resolver.moveThisFrame) return;
+    // TODO Sort by priority
+    for (MoveResolver::MoveRequest& request : resolver.requestedMoves)
+    {
+        Stage current = grid.tiles[request.from.y][request.from.x];
+        grid.tiles[request.from.y][request.from.x] = {EMPTY, 0};
+        grid.tiles[request.to.y][request.to.x] = current;
+        // TODO If the move was successful!
+        BicycleMango::GetProps<Mover>()[request.moverId].pos = request.to;
+    }
+    resolver.requestedMoves.clear();
+}
 
 void RenderGrid_Act(WindowGameState& game, Grid& grid)
 {

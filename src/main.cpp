@@ -37,12 +37,14 @@ int main()
     };
     BicycleMango::Plan(PlayerChangeMovementDirection::Id(), {INPUT}, moverIsPlayer);
     BicycleMango::Plan(PlayerPlaceTiles::Id(), {INPUT}, moverIsPlayer);
+    BicycleMango::Plan(MoverDirectionChoiceAI::Id(), {AI});
     BicycleMango::Plan(EvaluateMoves::Id(), {UPDATE, 100});
+    BicycleMango::Plan(ResolveMoves::Id(), {UPDATE, 150});
     // TODO: More convenient way to add partial statics
-//     BicycleMango::novelTupleCreators[EvaluateMoves::Id()].stageConstraints[BicycleMango::GetPropTypeId<Grid>()] = 
-//     [](const Stage&){return true;};
-//     BicycleMango::novelTupleCreators[EvaluateMoves::Id()].stageConstraints[BicycleMango::GetPropTypeId<MoveResolver>()] = 
-//     [](const Stage&){return true;};
+    BicycleMango::novelTupleCreators[EvaluateMoves::Id()].stageConstraints[BicycleMango::GetPropTypeId<Grid>()] = 
+    [](const Stage&){return true;};
+    BicycleMango::novelTupleCreators[EvaluateMoves::Id()].stageConstraints[BicycleMango::GetPropTypeId<MoveResolver>()] = 
+    [](const Stage&){return true;};
     BicycleMango::Plan(DisplayWindow::Id(), {DISPLAY});
     BicycleMango::Plan(SpriteRenderer::Id(), {RENDER});
     BicycleMango::Plan(DisplayUpdateStats::Id(), {RENDER, 10});
