@@ -80,9 +80,9 @@ int main()
     moveResolver->beatSFX.setBuffer(*Resources::inst->LoadSoundBuffer("beat.wav"));
     
     // TODO Variadic stages for AddProp
-    auto snakeMover = BicycleMango::AddProp<Mover>({{SNAKE, 0}, {SNAKE_HEAD, 0}});
-    snakeMover->pos = {grid->cols - 2, grid->rows - 2};
-    snakeMover->prevMove = snakeMover->nextMove = Direction::NORTH;
+//     auto snakeMover = BicycleMango::AddProp<Mover>({{SNAKE, 0}, {SNAKE_HEAD, 0}});
+//     snakeMover->pos = {grid->cols - 2, grid->rows - 2};
+//     snakeMover->prevMove = snakeMover->nextMove = Direction::NORTH;
     
     auto playerMover = BicycleMango::AddProp<Mover>({{PLAYER, 0}});
     playerMover->pos = {1, 1};
