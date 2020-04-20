@@ -64,7 +64,9 @@ int main()
     auto title = BicycleMango::AddProp<Sprite>({{GAME_STATE, 0}, {TITLE_SCREEN, 0}});
     title->sprite.setTexture(*Resources::inst->LoadTexture("play-area.png"));
     
-    BicycleMango::AddProp<ConflictStats>({{UI, 0}, {SNAKE, 0}});
+    auto conflict = BicycleMango::AddProp<ConflictStats>({{UI, 0}, {SNAKE, 0}});
+    conflict->blood = 16;
+    conflict->swords = 2;
     auto stats = BicycleMango::AddProp<StatRenderInfo>({{SNAKE, 0}});
     stats->statFont = *Resources::inst->LoadFont("madness.ttf");
     stats->blood.setFont(stats->statFont);

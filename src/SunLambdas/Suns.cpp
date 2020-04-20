@@ -85,13 +85,44 @@ void TickMoveEvent_Act(MoveResolver& resolver)
     }
 }
 
+struct MoveOption
+{
+    sf::Vector2i pos;
+    Direction direction;
+    Stage occupying;
+    int prio{0};
+};
+
 // TODO Refactor into multiple AI with compatibility constraints
 void MoverDirectionChoiceAI_Act(Grid& grid, Mover& mover)
 {
     Stage stage = grid.tiles[mover.pos.y][mover.pos.x];
+    std::vector<MoveOption> moveOptions;
+    for (int i = 0; i < 4; i++)
+    {
+        sf::Vector2i potential = mover.pos + Movement::GetOffsetVector(static_cast<Direction>(i));
+        if (Grid::PosInGrid(potential)) moveOptions.push_back({potential, static_cast<Direction>(i), grid.tiles[potential.y][potential.x]});
+    }
+    auto Priority = [](std::vector<MoveOption> prioritySelect) -> MoveOption
+    {
+        std::sort(prioritySelect.begin(), prioritySelect.end(), [](MoveOption& a, MoveOption& b)
+        {
+            if (SnakeAI::magnets.count(a.occupying.group)) a.prio = SnakeAI::magnets[a.occupying.group];
+            if (SnakeAI::magnets.count(b.occupying.group)) b.prio = SnakeAI::magnets[b.occupying.group];
+            return a.prio > b.prio;
+        });
+        return prioritySelect[0];
+    };
     if (stage.group == SNAKE_HEAD)
     {
-        
+        MoveOption bestChoice = Priority(moveOptions);
+        if (bestChoice.prio == 0)
+        {
+            mover.nextMove = moveOptions[rand() % moveOptions.size()].direction;
+        } else
+        {
+            mover.nextMove = bestChoice.direction;
+        }
     }
 }
 
@@ -128,6 +159,9 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid)
     {
         Stage current = grid.tiles[request.from.y][request.from.x];
         grid.tiles[request.from.y][request.from.x] = {EMPTY, 0};
+        
+        // TODO: Respond to event
+        
         grid.tiles[request.to.y][request.to.x] = current;
         // TODO If the move was successful!
         BicycleMango::GetProps<Mover>()[request.moverId].pos = request.to;

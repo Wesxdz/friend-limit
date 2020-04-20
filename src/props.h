@@ -58,6 +58,8 @@ struct Grid : Prop
     std::set<Group> shouldGroupWrap = {PLAYER, PEASANT, HERO};
     
     sf::Sound placeApple;
+    
+    static inline bool PosInGrid( sf::Vector2i pos){return pos.x >= 0 && pos.x < cols && pos.y >= 0 && pos.y < rows; }
 };
 
 struct MoveResolver : Prop
@@ -86,4 +88,9 @@ struct Mover : Prop
     sf::Vector2i pos;
     Direction prevMove;
     Direction nextMove;
+};
+
+struct SnakeAI : Prop
+{
+    static inline std::unordered_map<Group, int> magnets = {{PEASANT, 100}, {KNIGHT, 70}, {HERO, 80}, {APPLE, 150}, {PLAYER, 100}};
 };
