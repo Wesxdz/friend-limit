@@ -8,6 +8,7 @@ enum GROUP : Group
     SNAKE_BODY,
     SNAKE_TAIL,
     PEASANT,
+    // Should combat units have constant swords or scale over time?
     KNIGHT,
     HERO,
     APPLE,

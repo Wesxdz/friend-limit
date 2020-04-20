@@ -57,9 +57,30 @@ struct Grid : Prop
     Stage tiles[rows][cols];
     std::set<Group> shouldGroupWrap = {PLAYER, PEASANT, HERO};
     
-    sf::Sound placeApple;
-    
     static inline bool PosInGrid( sf::Vector2i pos){return pos.x >= 0 && pos.x < cols && pos.y >= 0 && pos.y < rows; }
+    static inline void Wrap(sf::Vector2i& wrapPos)
+    {
+        if (wrapPos.x >= cols) 
+        {
+            wrapPos.x = 0;
+        } else if (wrapPos.x <= -1)
+        {
+            wrapPos.x = cols - 1;
+        }
+        if (wrapPos.y >= rows) 
+        {
+            wrapPos.y = 0;
+        } else if (wrapPos.y <= -1)
+        {
+            wrapPos.y = rows - 1;
+        }
+    }
+};
+
+struct AudioManager : Prop
+{
+    sf::Sound placeApple;
+    sf::Sound eat;
 };
 
 struct MoveResolver : Prop
@@ -95,4 +116,9 @@ struct SnakeAI : Prop
     std::vector<sf::Vector2i> snakeParts;
     // TODO Non static
     static inline std::unordered_map<Group, int> magnets = {{SNAKE_TAIL, -100}, {SNAKE_BODY, -200}, {PEASANT, 100}, {KNIGHT, 70}, {HERO, 80}, {APPLE, 150}, {PLAYER, 100}};
+};
+
+struct Spawner : Prop
+{
+    std::set<sf::Vector2i> spawnLocations;
 };

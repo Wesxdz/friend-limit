@@ -14,13 +14,16 @@
 
 // TODO Make sure typesets are in the same order always (for performance) and enforce that :/
 // TODO: Refactor WindowGameState into another Events prop for clarity
-DeclareSunLambda(PlayerPlaceTiles, WindowGameState&, Grid&, Mover&);
+
+DeclareSunLambda(RenderCursor, WindowGameState&, Mover&);
+DeclareSunLambda(SetPrevPos, Mover&);
+DeclareSunLambda(PlayerPlaceTiles, WindowGameState&, Grid&, Mover&, AudioManager&);
 DeclareSunLambda(PlayerChangeMovementDirection, WindowGameState&, Mover&);
 DeclareSunLambda(TickMoveEvent, MoveResolver&);
 // Declare MoveResolver and Grid can be reused with PartialStaticIndicators
 DeclareSunLambda(MoverDirectionChoiceAI, Grid&, Mover&);
 DeclareSunLambda(EvaluateMoves, Grid&, MoveResolver&, Mover&);
-DeclareSunLambda(ResolveMoves, MoveResolver&, Grid&, SnakeAI&);
+DeclareSunLambda(ResolveMoves, MoveResolver&, Grid&, SnakeAI&, ConflictStats&, AudioManager&);
 
 DeclareSunLambda(SetupGrid, Grid&);
 DeclareSunLambda(RenderGrid, WindowGameState&, Grid&);

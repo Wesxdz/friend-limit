@@ -22,10 +22,12 @@ int main()
     
     BicycleMango::Emerge(SetupGrid::Id());
     
+    
     // Suns
     // SUNS MUST BE PLANNED BEFORE ADDING PROPS SO THAT THERE IS A NON-NULL COMPATABILITY CONSTRANT CURRENTLY
     // What should probably be done instead is only require adding compatability constraints before adding props, not necessarily all planning
     BicycleMango::Plan(PollWindowEvents::Id(), {FORAGE, 3});
+    BicycleMango::Plan(SetPrevPos::Id(), {FORAGE, 10});
     BicycleMango::Plan(TickMoveEvent::Id(), {FORAGE, 100});
     
     auto moverIsPlayer = 
@@ -47,8 +49,9 @@ int main()
     [](const Stage&){return true;};
     BicycleMango::Plan(DisplayWindow::Id(), {DISPLAY});
     BicycleMango::Plan(SpriteRenderer::Id(), {RENDER});
-    BicycleMango::Plan(DisplayUpdateStats::Id(), {RENDER, 10});
     BicycleMango::Plan(RenderGrid::Id(), {RENDER, 5});
+    BicycleMango::Plan(RenderCursor::Id(), {RENDER, 50}, moverIsPlayer);
+    BicycleMango::Plan(DisplayUpdateStats::Id(), {RENDER, 100});
 
 #ifdef HOT_RELOAD
     BicycleMango::Plan(HotReloadWatcher::Id(), {UPDATE});
@@ -65,8 +68,8 @@ int main()
     title->sprite.setTexture(*Resources::inst->LoadTexture("play-area.png"));
     
     auto conflict = BicycleMango::AddProp<ConflictStats>({{UI, 0}, {SNAKE, 0}});
-    conflict->blood = 16;
-    conflict->swords = 2;
+    conflict->blood = 3;
+    conflict->swords = 1;
     auto stats = BicycleMango::AddProp<StatRenderInfo>({{SNAKE, 0}});
     stats->statFont = *Resources::inst->LoadFont("madness.ttf");
     stats->blood.setFont(stats->statFont);
@@ -80,6 +83,10 @@ int main()
     stats->swords.setOrigin(0, 8);
     stats->swords.setFillColor(sf::Color(148, 0, 255));
     stats->swordsAnchorPos = {84, 7};
+    
+    auto audio = BicycleMango::AddProp<AudioManager>({{GAME_STATE, 0}});
+    audio->placeApple.setBuffer(*Resources::inst->LoadSoundBuffer("place-apple.wav"));
+    audio->eat.setBuffer(*Resources::inst->LoadSoundBuffer("eat.wav"));
     
     auto grid = BicycleMango::AddProp<Grid>({{GAME_STATE, 0}});
     auto moveResolver = BicycleMango::AddProp<MoveResolver>({{GAME_STATE, 0}});
@@ -97,6 +104,7 @@ int main()
     auto playerMover = BicycleMango::AddProp<Mover>({{PLAYER, 0}, {GAME_STATE, 0}});
     playerMover->pos = {1, 1};
     playerMover->prevMove = playerMover->nextMove = Direction::SOUTH;
+    
     
     
     while (!BicycleMango::brake)

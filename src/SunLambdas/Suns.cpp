@@ -5,20 +5,38 @@
 #include <string>
 #include "Direction.h"
 
-void PlayerPlaceTiles_Act(WindowGameState& game, Grid& grid, Mover& mover)
+void RenderCursor_Act(WindowGameState& game, Mover& mover)
+{
+    sf::Sprite cursor;
+    cursor.setTexture(*Resources::inst->LoadTexture("cursor.png"));
+    cursor.setOrigin(1, 1);
+    sf::Vector2i cursorPos = mover.pos;
+//     cursorPos -= Movement::GetOffsetVector(mover.prevMove);
+    cursorPos.y--;
+//     Grid::Wrap(cursorPos);
+    cursor.setPosition(cursorPos.x * Grid::tile_width, Grid::offset_y + cursorPos.y * Grid::tile_height);
+    game.window.draw(cursor);
+}
+
+void SetPrevPos_Act(Mover& mover)
+{
+    mover.prevMove = mover.nextMove;
+}
+
+void PlayerPlaceTiles_Act(WindowGameState& game, Grid& grid, Mover& mover, AudioManager& audio)
 {
     for (auto& event : game.events[sf::Event::EventType::KeyPressed])
     {
         if (event.key.code == sf::Keyboard::Key::Space)
         {
             sf::Vector2i placePos = mover.pos;
-            placePos.y++;
-            if (placePos.y == grid.rows) placePos.y = 0;
+            placePos -= Movement::GetOffsetVector(mover.prevMove);
+            Grid::Wrap(placePos);
             if (grid.tiles[placePos.y][placePos.x].group == EMPTY)
             {
-                if (grid.placeApple.getPlayingOffset().asSeconds() == 0.0f)
+                if (audio.placeApple.getPlayingOffset().asSeconds() == 0.0f)
                 {
-                    grid.placeApple.play();
+                    audio.placeApple.play();
                 }
                 grid.tiles[placePos.y][placePos.x] = BicycleMango::Next(APPLE);
             }
@@ -65,7 +83,6 @@ void SetupGrid_Act(Grid& grid)
     }
     grid.tiles[1][1] = {PLAYER, 0};
     grid.tiles[grid.rows - 2][grid.cols - 2] = {SNAKE_HEAD, 0};
-    grid.placeApple.setBuffer(*Resources::inst->LoadSoundBuffer("place-apple.wav"));
 }
 
 void TickMoveEvent_Act(MoveResolver& resolver)
@@ -137,35 +154,45 @@ void EvaluateMoves_Act(Grid& grid, MoveResolver& resolver, Mover& mover)
     sf::Vector2i moveToPos = mover.pos + Movement::GetOffsetVector(mover.nextMove);
     if (grid.shouldGroupWrap.count(grid.tiles[mover.pos.y][mover.pos.x].group))
     {
-        if (moveToPos.x == grid.cols) 
-        {
-            moveToPos.x = 0;
-        } else if (moveToPos.x == -1)
-        {
-            moveToPos.x = grid.cols - 1;
-        }
-        if (moveToPos.y == grid.rows) 
-        {
-            moveToPos.y = 0;
-        } else if (moveToPos.y == -1)
-        {
-            moveToPos.y = grid.rows - 1;
-        }
+        Grid::Wrap(moveToPos);
     }
     resolver.requestedMoves.push_back({mover.pos, moveToPos, mover.id});
 };
 
-void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai)
+void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictStats& stats, AudioManager& audio)
 {
     if (!resolver.moveThisFrame) return;
     // TODO Sort by priority
     for (MoveResolver::MoveRequest& request : resolver.requestedMoves)
     {
+        bool moveSuccessful = true;
         Stage current = grid.tiles[request.from.y][request.from.x];
         Stage hit = grid.tiles[request.to.y][request.to.x];
+        if (hit.group == APPLE)
+        {
+            audio.eat.play();
+        }
         // TODO Respond to all stages interaction
         if (current.group == SNAKE_HEAD)
         {
+            if (hit.group == SNAKE_BODY || hit.group == SNAKE_TAIL)
+            {
+                std::cout << "Snake bit himself!" << std::endl;
+                // Snake bites of his tail and reduced blood x2 for each 'follow part' removed
+                auto followPartBitten = std::find(ai.snakeParts.begin(), ai.snakeParts.end(), request.to);
+                if (ai.snakeParts.size() > 2)
+                {
+                    auto newTail = followPartBitten - 1;
+                    grid.tiles[(*newTail).y][(*newTail).x] = grid.tiles[(*(--ai.snakeParts.end())).y][(*(--ai.snakeParts.end())).x];
+                }
+                for (auto part_it = followPartBitten; part_it != ai.snakeParts.end(); part_it++)
+                {
+                    const int bloodLostPerTail = 2;
+                    stats.blood -= bloodLostPerTail;
+                    grid.tiles[(*part_it).y][(*part_it).x] = {EMPTY, 0};
+                }
+                ai.snakeParts.erase(followPartBitten, ai.snakeParts.end());
+            }
             if (hit.group == PLAYER)
             {
                 std::cout << "GAME OVER!" << std::endl;
@@ -188,6 +215,12 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai)
                 }
                 // When the snake grows, we don't update the movement of the entire snake: only the head
                 grid.tiles[request.to.y][request.to.x] = current;
+                switch (hit.group)
+                {
+                    case APPLE:
+                        stats.blood++;
+                        break;
+                }
             } else
             {
                 sf::Vector2i prevPartPos = request.from;
@@ -212,7 +245,8 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai)
             const std::set<Group> playerBlockedBy = {SNAKE_BODY, SNAKE_TAIL, KNIGHT, PEASANT, HERO};
             if (playerBlockedBy.count(hit.group))
             {
-                
+                std::cout << "Player blocked by " << hit << std::endl;
+                moveSuccessful = false;
             } else
             {
                 grid.tiles[request.from.y][request.from.x] = {EMPTY, 0};
@@ -224,10 +258,13 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai)
             grid.tiles[request.from.y][request.from.x] = {EMPTY, 0};
             grid.tiles[request.to.y][request.to.x] = current;
         }
-        // TODO If the move was successful!
-        BicycleMango::GetProps<Mover>()[request.moverId].pos = request.to;
+        if (moveSuccessful)
+        {
+            BicycleMango::GetProps<Mover>()[request.moverId].pos = request.to;
+        }
     }
     resolver.requestedMoves.clear();
+    stats.swords = ai.snakeParts.size();
 }
 
 void RenderGrid_Act(WindowGameState& game, Grid& grid)
@@ -259,14 +296,6 @@ void RenderGrid_Act(WindowGameState& game, Grid& grid)
             }
         }
     }
-    sf::Sprite cursor;
-    cursor.setTexture(*Resources::inst->LoadTexture("cursor.png"));
-    cursor.setOrigin(1, 1);
-    sf::Vector2i cursorPos = playerPos;
-    cursorPos.y++;
-    if (cursorPos.y == grid.rows) cursorPos.y = 0;
-    cursor.setPosition(cursorPos.x * grid.tile_width, grid.offset_y + cursorPos.y * grid.tile_height);
-    game.window.draw(cursor);
 }
 
 void DisplayUpdateStats_Act(WindowGameState& game, StatRenderInfo& statInfo, ConflictStats& stats)
