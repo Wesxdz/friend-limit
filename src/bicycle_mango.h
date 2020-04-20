@@ -254,6 +254,7 @@ public:
         AddPropStages(propId, stages);
         
         auto propTypeId = GetPropTypeId<PropType>();
+        std::cout << "--- Adding prop {" << propTypeNames[propTypeId] << ", " << id << "}" << std::endl;
         auto typesetsWithAddedPropType = BicycleMango::mappedPropTupleTypesets[propTypeId];
         
         // ---
@@ -270,7 +271,7 @@ public:
                 std::unordered_map<PropTypeId, std::vector<PropIdRaw>>& potentialNeighbors = BicycleMango::stagingPropTuples[(*sunlambda_it)];
                 // However, both potential neighbors AND partial statics will be added to compatibleNeighbors later in this function
                 std::unordered_map<PropTypeId, std::vector<PropIdRaw>> compatibleNeighbors;
-                bool addedPropFulfillsCompatabilityConstraint = true;
+                bool addedPropFulfillsCompatabilityConstraint = false;
                 bool novelTupleRuledOut = false;
                 
                 auto IsPropCompatibleWithSunLambda = [sunlambda_it](PropTypeId ptid, PropIdRaw rid) -> bool
@@ -278,55 +279,65 @@ public:
                     std::cout << propTypeNames[ptid] << ", " << "id: " << rid << " on SunLambda: " << SunLambdaRegistry::GetInstance().Get((*sunlambda_it)).name << std::endl;
                     
                     for (const Stage& stage : ptpsq[ptid][rid])
-                        if (!novelTupleCreators[(*sunlambda_it)].compatible(ptid, stage))
-                            return false;
-                    return true;
+                    {
+                        std::cout << "Checking compatability on stage: " << stage << " for {" << propTypeNames[ptid] << ", " << rid << "}" << std::endl;
+                        if (novelTupleCreators[(*sunlambda_it)].compatible(ptid, stage))
+                        {
+                            std::cout << "COMPATIBLE!" << std::endl;
+                            return true;
+                        }
+                    }
+                    return false;
                 };
                 
                 // The first thing we need to check is if the prop we're adding fulfills the compatability constraint for this SunLambda, if not then we can short circut everything
-                if (!IsPropCompatibleWithSunLambda(propTypeId, id))
+                if (IsPropCompatibleWithSunLambda(propTypeId, id))
                 {
-                    std::cout << "Prop does not fulfill compatability constraint!" << std::endl;
-                    addedPropFulfillsCompatabilityConstraint = false;
+                    addedPropFulfillsCompatabilityConstraint = true;
+                } else
+                {
                     novelTupleRuledOut = true;
+                    std::cout << "Prop does not fulfill compatability constraint!" << std::endl;
                 }
                 
                 bool isAddedPropPartialStatic = false;
-                // TODO && addedProp is not a partial static
-                if (novelTupleCreators.count((*sunlambda_it)) > 0)
+                if (!novelTupleRuledOut)
                 {
-                    NovelTupleCreator& creator = novelTupleCreators[(*sunlambda_it)];
-                    if (creator.stageConstraints.count(propTypeId) > 0)
+                    if (novelTupleCreators.count((*sunlambda_it)) > 0)
                     {
-                        std::cout << "Has stage constraints!" << std::endl;
-                        auto& reuse = creator.stageConstraints[propTypeId];
-                        for (const Stage& stage : ptpsq[propTypeId][id])
+                        NovelTupleCreator& creator = novelTupleCreators[(*sunlambda_it)];
+                        if (creator.stageConstraints.count(propTypeId) > 0)
                         {
-                            std::cout << "Test stage: " << stage << std::endl;
-                            if (reuse(stage))
+                            std::cout << "Has stage constraints!" << std::endl;
+                            auto& reuse = creator.stageConstraints[propTypeId];
+                            for (const Stage& stage : ptpsq[propTypeId][id])
                             {
-                                std::cout << "REUSE PROP!!!!" << std::endl;
-                                isAddedPropPartialStatic = true;
-                                size_t i = 0;
-                                for (const PropTypeId& ptid : (*typeset_it))
+                                std::cout << "Test stage: " << stage << std::endl;
+                                if (reuse(stage))
                                 {
-                                    if (ptid == propTypeId)
+                                    std::cout << "REUSE PROP!!!!" << std::endl;
+                                    isAddedPropPartialStatic = true;
+                                    size_t i = 0;
+                                    for (const PropTypeId& ptid : (*typeset_it))
                                     {
-                                        // I really hope this automatically resizes lol
-                                        std::vector<std::vector<PropIdRaw>>& sad = partialStatics[(*sunlambda_it)];
-                                        if (sad.size() == 0)
+                                        if (ptid == propTypeId)
                                         {
-                                            std::vector<PropIdRaw> p((*typeset_it).size());
-                                            sad.push_back(p);
+                                            // I really hope this automatically resizes lol
+                                            std::vector<std::vector<PropIdRaw>>& sad = partialStatics[(*sunlambda_it)];
+                                            if (sad.size() == 0)
+                                            {
+                                                std::vector<PropIdRaw> p((*typeset_it).size());
+                                                sad.push_back(p);
+                                            }
+                                            std::cout << sad.size() << std::endl;
+                                            sad[0][i] = id; // TODO replace 0, WHICH PARTIAL STATIC TO CHOOSE?? creator.stageConstraints
+                                            
                                         }
-                                        std::cout << sad.size() << std::endl;
-                                        sad[0][i] = id; // TODO replace 0, WHICH PARTIAL STATIC TO CHOOSE?? creator.stageConstraints
-                                        
+                                        i++;
+                                        break;
                                     }
-                                    i++;
                                     break;
                                 }
-                                break;
                             }
                         }
                     }
@@ -345,6 +356,9 @@ public:
                                 std::cout << "Found partial static: " << propTypeNames[ptid] << std::endl;
                                 partialStaticNeighbors[ptid] = partialStatic;
                                 return true;
+                            } else
+                            {
+                                std::cout << "Partial static not compatible!" << std::endl;
                             }
                         }
                     }
@@ -371,57 +385,40 @@ public:
                 {
                     for (auto neighbor_it = potentialNeighbors.begin(); neighbor_it != potentialNeighbors.end(); ++neighbor_it)
                     {
-                        if ((*neighbor_it).first != propTypeId) // is prop type different than the one being added
+                        if ((*neighbor_it).first == propTypeId || partialStaticNeighbors.count((*neighbor_it).first)) continue;
+                        if (partialStaticNeighbors.count((*neighbor_it).first)) continue; // If there is a partial static neighbor, let's just use that :)
+                        for (auto& neighborId : (*neighbor_it).second)
                         {
-                            if (partialStaticNeighbors.count((*neighbor_it).first)) continue; // If there is a partial static neighbor, let's just use that :)
-                            for (auto& neighborId : (*neighbor_it).second)
-                            {
 //                                 std::cout << "Let's go " << propTypeNames[(*neighbor_it).first] << " has " << (*neighbor_it).second.size() << std::endl;
-                                if (IsPropCompatibleWithSunLambda((*neighbor_it).first, neighborId))
-                                {
-                                    std::cout << "Found it!" << std::endl;
-                                    compatibleNeighbors[(*neighbor_it).first].push_back(neighborId);
-                                    break; // Not sure what to do if there are multiple compatible neighbors, for now we just FIFO after considering compatability
-                                }
-                            }
-                            if (compatibleNeighbors[(*neighbor_it).first].empty()) 
+                            if (IsPropCompatibleWithSunLambda((*neighbor_it).first, neighborId))
                             {
-                                std::cout << "Compatible neighbors is empty on " << propTypeNames[(*neighbor_it).first] << " while the prop type being added is " << propTypeNames[propTypeId] << std::endl;
-                                novelTupleRuledOut = true;
-                                break; // No compatible neighbors of ptid to pair with
+                                std::cout << "Found it!" << std::endl;
+                                compatibleNeighbors[(*neighbor_it).first].push_back(neighborId);
+                                break; // Not sure what to do if there are multiple compatible neighbors, for now we just FIFO after considering compatability
                             }
+                        }
+                        if (compatibleNeighbors[(*neighbor_it).first].empty()) 
+                        {
+                            std::cout << "Compatible neighbors is empty on " << propTypeNames[(*neighbor_it).first] << " while the prop type being added is " << propTypeNames[propTypeId] << std::endl;
+                            novelTupleRuledOut = true;
+                            break; // No compatible neighbors of ptid to pair with
                         }
                     }
                 }
                 // Compatible neighbors is now populated with props that are compatible with (*sunlambda_it)
                 std::vector<GlobalPropId> novelTuple((*typeset_it).size());
                 
+                int addedPropTypeIndex = 0;
                 if (!novelTupleRuledOut)
                 {
-//                     for (auto ptid_it = compatibleNeighbors.begin(); ptid_it != compatibleNeighbors.end(); ++ptid_it)
-//                     {
-//                         std::cout << "Check for compatible neighbors" << std::endl;
-//                         if ((*ptid_it).first != propTypeId) // is prop of other type
-//                         {
-//                             TODO Below needs to be updated to not pick the last available always once compatability is implemented!
-//                             PropIdRaw chosenProp = (*ptid_it).second.back(); // Just pick the last available compatible one
-//                             novelTuple.push_back({(*ptid_it).first, chosenProp});
-//                             std::cout << "Add to novel tuple" << std::endl;
-//                             Need to remove this from potentialNeighbors if it should not be part of multiple tuples of this typeset
-//                             TODO: How to determine if a neighbor should be allowed to be reused (and not consumed)
-//                             bool isPartialStatic = false;
-//                             if (!isPartialStatic)
-//                             {
-//                                 We should only remove props if a novel tuple is formed
-//                                 potentialNeighbors[(*ptid_it).first].pop_back();
-//                             }
-//                         }
-//                     }
-                    
                     int i = 0;
                     for (const PropTypeId& ptid : (*typeset_it))
                     {
-                        if (ptid == propTypeId) continue;
+                        if (ptid == propTypeId) 
+                        {
+                            addedPropTypeIndex = i;
+                            continue;
+                        }
                         if (partialStaticNeighbors.count(ptid))
                         {
                             novelTuple[i] = {ptid, partialStaticNeighbors[ptid]};
@@ -433,10 +430,11 @@ public:
                         i++;
                     }
                     
-                    std::cout << "Formed novel tuple of " << SunLambdaRegistry::GetInstance().Get((*sunlambda_it)).name << std::endl;
+                    std::cout << "Formed novel tuple of " << SunLambdaRegistry::GetInstance().Get((*sunlambda_it)).name << " with the following props:" << std::endl;
+                    
                     
                     // The prop that we're adding should be included in the novel tuple! Hooray!
-                    novelTuple.push_back({propTypeId, id});
+                    novelTuple[addedPropTypeIndex] = {propTypeId, id};
                     // The prop that we're adding should be removed from potential neighbors
     //                 std::cout << "Inserting novel tuple of " << novelTuple.size() << " size" << std::endl;
                     novelTuples[(*sunlambda_it)].push_back(novelTuple);
@@ -456,10 +454,11 @@ public:
                     }
                     
                 } 
-                else if (addedPropFulfillsCompatabilityConstraint)
+                else
                 {
-                    if (!isAddedPropPartialStatic)
+                    if (addedPropFulfillsCompatabilityConstraint && !isAddedPropPartialStatic)
                     {
+                        std::cout << "Staging " << propTypeNames[propTypeId] << ": " << id << std::endl;
                         BicycleMango::stagingPropTuples[(*sunlambda_it)][propTypeId].push_back(id);
                     }
                 }

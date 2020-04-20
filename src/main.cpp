@@ -31,16 +31,18 @@ int main()
     auto moverIsPlayer = 
     [](BicycleMango::PropTypeId propTypeId, const Stage& stage) -> bool
     {
-        if (BicycleMango::GetPropTypeId<Mover>() == propTypeId) 
+        if (BicycleMango::GetPropTypeId<Mover>() == propTypeId)
             return stage.group == PLAYER;
         return true;
     };
     BicycleMango::Plan(PlayerChangeMovementDirection::Id(), {INPUT}, moverIsPlayer);
     BicycleMango::Plan(PlayerPlaceTiles::Id(), {INPUT}, moverIsPlayer);
-    BicycleMango::Plan(EvaluateMoves::Id(), {UPDATE, 100}, BicycleMango::All);
+    BicycleMango::Plan(EvaluateMoves::Id(), {UPDATE, 100});
     // TODO: More convenient way to add partial statics
-    BicycleMango::novelTupleCreators[EvaluateMoves::Id()].stageConstraints[BicycleMango::GetPropTypeId<Grid>()] = [](const Stage&){return true;};
-    BicycleMango::novelTupleCreators[EvaluateMoves::Id()].stageConstraints[BicycleMango::GetPropTypeId<MoveResolver>()] = [](const Stage&){return true;};
+//     BicycleMango::novelTupleCreators[EvaluateMoves::Id()].stageConstraints[BicycleMango::GetPropTypeId<Grid>()] = 
+//     [](const Stage&){return true;};
+//     BicycleMango::novelTupleCreators[EvaluateMoves::Id()].stageConstraints[BicycleMango::GetPropTypeId<MoveResolver>()] = 
+//     [](const Stage&){return true;};
     BicycleMango::Plan(DisplayWindow::Id(), {DISPLAY});
     BicycleMango::Plan(SpriteRenderer::Id(), {RENDER});
     BicycleMango::Plan(DisplayUpdateStats::Id(), {RENDER, 10});
@@ -80,13 +82,15 @@ int main()
     moveResolver->beatSFX.setBuffer(*Resources::inst->LoadSoundBuffer("beat.wav"));
     
     // TODO Variadic stages for AddProp
-//     auto snakeMover = BicycleMango::AddProp<Mover>({{SNAKE, 0}, {SNAKE_HEAD, 0}});
-//     snakeMover->pos = {grid->cols - 2, grid->rows - 2};
-//     snakeMover->prevMove = snakeMover->nextMove = Direction::NORTH;
     
-    auto playerMover = BicycleMango::AddProp<Mover>({{PLAYER, 0}});
+    auto snakeMover = BicycleMango::AddProp<Mover>({{SNAKE, 0}, {SNAKE_HEAD, 0}});
+    snakeMover->pos = {grid->cols - 2, grid->rows - 2};
+    snakeMover->prevMove = snakeMover->nextMove = Direction::NORTH;
+    
+    auto playerMover = BicycleMango::AddProp<Mover>({{PLAYER, 0}, {GAME_STATE, 0}});
     playerMover->pos = {1, 1};
     playerMover->prevMove = playerMover->nextMove = Direction::SOUTH;
+    
     
     while (!BicycleMango::brake)
     {
