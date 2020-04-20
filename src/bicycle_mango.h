@@ -468,10 +468,37 @@ public:
         return &prop;
     }
 
-
     // Props should only be removed by stage rather than considering type
-    static void RemovePropsOnStage(Stage stage)
+    static void RemovePropsWithStage(Stage stage)
     {
+        // Find all props with the stage
+        // Remove all novel tuples that contain at least one of these props
+        // Restage
+    }
+    
+    // Let's start over
+    static void ResetProps()
+    {
+        partialStatics.clear();
+        ptpsq.clear();
+        stagingPropTuples.clear();
+        novelTuples.clear();
+        instanceBuffer.clear();
+    }
+    
+    static void ResetSunLambdas()
+    {
+        // DO NOT CLEAR REGISTRY OR TYPESETS
+        breakups.clear();
+        emerges.clear();
+        schedules.clear();
+        novelTupleCreators.clear();
+    }
+    
+    static void Reset()
+    {
+        ResetProps();
+        ResetSunLambdas();
     }
 
     template <typename PropType>

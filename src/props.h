@@ -12,6 +12,17 @@ struct WindowGameState : Prop
     bool focus = false;
 };
 
+struct MenuManager : Prop
+{
+    enum Status
+    {
+        TITLE,
+        GAME_OVER,
+        PAUSED,
+        PLAYING,
+    } status = TITLE;
+};
+
 struct Sprite : Prop
 {
     sf::Sprite sprite;

@@ -4,6 +4,20 @@
 #include "bicycle_mango.h"
 #include <string>
 #include "Direction.h"
+#include "FriendLimit.h"
+
+void EnterGame_Act(WindowGameState& game, MenuManager& menu, Sprite& background)
+{
+    if (game.events.count(sf::Event::EventType::KeyPressed))
+    {
+        if (menu.status == MenuManager::TITLE || menu.status == MenuManager::GAME_OVER)
+        {
+            menu.status = MenuManager::PLAYING;
+            background.sprite.setTexture(*Resources::inst->LoadTexture("play-area.png"));
+            FriendLimit::SetupGameplay();
+        }
+    }
+}
 
 void RenderCursor_Act(WindowGameState& game, Mover& mover)
 {
@@ -13,7 +27,7 @@ void RenderCursor_Act(WindowGameState& game, Mover& mover)
     sf::Vector2i cursorPos = mover.pos;
 //     cursorPos -= Movement::GetOffsetVector(mover.prevMove);
     cursorPos.y--;
-//     Grid::Wrap(cursorPos);
+//     Grid::Wrap(cursorPos);a
     cursor.setPosition(cursorPos.x * Grid::tile_width, Grid::offset_y + cursorPos.y * Grid::tile_height);
     game.window.draw(cursor);
 }
@@ -111,14 +125,20 @@ struct MoveOption
 };
 
 // TODO Refactor into multiple AI with compatibility constraints
-void MoverDirectionChoiceAI_Act(Grid& grid, Mover& mover)
+void MoverDirectionChoiceAI_Act(Grid& grid, Mover& mover, MoveResolver& resolver)
 {
+    if (!resolver.moveThisFrame) return;
     Stage stage = grid.tiles[mover.pos.y][mover.pos.x];
     std::vector<MoveOption> moveOptions;
     for (int i = 0; i < 4; i++)
     {
-        sf::Vector2i potential = mover.pos + Movement::GetOffsetVector(static_cast<Direction>(i));
-        if (Grid::PosInGrid(potential)) moveOptions.push_back({potential, static_cast<Direction>(i), grid.tiles[potential.y][potential.x]});
+        Direction dir = static_cast<Direction>(i);
+        sf::Vector2i potential = mover.pos + Movement::GetOffsetVector(dir);
+        if (Grid::PosInGrid(potential) && dir != Movement::Opposite(mover.prevMove))
+        {
+//             std::cout << "Move option: " << dir << std::endl;
+            moveOptions.push_back({potential, dir, grid.tiles[potential.y][potential.x]});
+        }
     }
     auto Priority = [](std::vector<MoveOption> prioritySelect) -> MoveOption
     {
@@ -196,6 +216,8 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictS
             if (hit.group == PLAYER)
             {
                 std::cout << "GAME OVER!" << std::endl;
+                FriendLimit::shouldSetupNewGame = true;
+                BicycleMango::brake = true;
             }
             bool growSnake = hit.group == APPLE;
             if (growSnake)
@@ -241,6 +263,8 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictS
             if (hit.group == SNAKE_HEAD)
             {
                 std::cout << "GAME OVER!" << std::endl;
+                FriendLimit::shouldSetupNewGame = true;
+                BicycleMango::brake = true;
             }
             const std::set<Group> playerBlockedBy = {SNAKE_BODY, SNAKE_TAIL, KNIGHT, PEASANT, HERO};
             if (playerBlockedBy.count(hit.group))
@@ -267,7 +291,7 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictS
     stats.swords = ai.snakeParts.size();
 }
 
-void RenderGrid_Act(WindowGameState& game, Grid& grid)
+void RenderGrid_Act(WindowGameState& game, Grid& grid, SnakeAI& ai)
 {
     sf::Sprite tiles;
     tiles.setTexture(*Resources::inst->LoadTexture("tiles.png"));
@@ -288,6 +312,21 @@ void RenderGrid_Act(WindowGameState& game, Grid& grid)
                     game.window.draw(player);
                     break;
                 case EMPTY:
+                    break;
+                case SNAKE_BODY:
+                case SNAKE_TAIL:
+                    for (int i = 0; i < ai.snakeParts.size(); i++)
+                    {
+                        if (ai.snakeParts[i] == sf::Vector2i{col, row})
+                        {
+                            int tone = std::max(64, 255 - ((i/3) * 32));
+                            tiles.setColor(sf::Color(tone, tone, tone));
+                        }
+                    }
+                    tiles.setPosition(col * grid.tile_width - 1, grid.offset_y + row * grid.tile_height - 1);
+                    tiles.setTextureRect({(g - SNAKE_HEAD) * (grid.tile_width + 2), 0, grid.tile_width + 2, grid.tile_height + 2});
+                    game.window.draw(tiles);
+                    tiles.setColor(sf::Color::White);
                     break;
                 default:
                     tiles.setPosition(col * grid.tile_width - 1, grid.offset_y + row * grid.tile_height - 1);

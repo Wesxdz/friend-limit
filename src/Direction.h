@@ -24,7 +24,23 @@ public:
             case SOUTH:
                 return {0, 1};
             case WEST:
+            default:
                 return {-1, 0};
+        }
+    }
+    static Direction Opposite(Direction direction)
+    {
+        switch (direction)
+        {
+            case NORTH:
+                return SOUTH;
+            case EAST:
+                return WEST;
+            case SOUTH:
+                return NORTH;
+            case WEST:
+            default:
+                return EAST;
         }
     }
     static Direction GetRandomDirection()

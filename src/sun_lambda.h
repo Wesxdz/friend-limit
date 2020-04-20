@@ -122,7 +122,6 @@ public:
     }
 #endif
 
-private: 
     SunLambdaRegistry() = default;
     std::unordered_map<SunLambda::Id, SunLambda> sunLambdas;
 
