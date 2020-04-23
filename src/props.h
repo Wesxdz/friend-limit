@@ -21,6 +21,8 @@ struct MenuManager : Prop
         PAUSED,
         PLAYING,
     } status = TITLE;
+    Status transitionTo; // Need to delay transition so sountrack can match up with beat
+    sf::Clock sinceStart;
 };
 
 struct Sprite : Prop

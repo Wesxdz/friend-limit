@@ -17,6 +17,14 @@ public:
     {
         srand(time(NULL));
         Resources::inst = new Resources();
+        
+        sf::Music soundtrack;
+        if (!soundtrack.openFromFile("resources/sounds/op1/wayward-wander.ogg"))
+        {
+            std::cout <<"Soundtrack failed to load" << std::endl;
+        }
+        soundtrack.setLoop(true);
+        soundtrack.play();
         FriendLimit::SetupSunLambdas();
         do {
             BicycleMango::brake = false;
@@ -106,11 +114,11 @@ public:
         
         auto audio = BicycleMango::AddProp<AudioManager>({{GAME_STATE, 0}});
         audio->placeApple.setBuffer(*Resources::inst->LoadSoundBuffer("place-apple.wav"));
-        audio->eat.setBuffer(*Resources::inst->LoadSoundBuffer("eat.wav"));
+        audio->eat.setBuffer(*Resources::inst->LoadSoundBuffer("op1/eat.wav"));
         
         auto grid = BicycleMango::AddProp<Grid>({{GAME_STATE, 0}});
         auto moveResolver = BicycleMango::AddProp<MoveResolver>({{GAME_STATE, 0}});
-        moveResolver->beatSFX.setBuffer(*Resources::inst->LoadSoundBuffer("beat.wav"));
+        moveResolver->beatSFX.setBuffer(*Resources::inst->LoadSoundBuffer("op1/beat.wav"));
         
         // TODO Variadic stages for AddProp
         
