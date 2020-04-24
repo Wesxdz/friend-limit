@@ -7,11 +7,11 @@ set(GAME_NAME friendlimit)
 set(SOURCE_PATH "src") # Relative to PROJECT_SOURCE_DIR
 set(GAME_LAMBDAS "${GAME_NAME}_lambdas")
 
-# set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
+# set(CMAKE_BUILD_TYPE Debug)
 
 # You can check for this in C++ with '#ifdef HOT_RELOAD'
-set(HOT_RELOAD True)
+set(HOT_RELOAD False)
 
 project(${GAME_NAME})
 
@@ -48,7 +48,9 @@ list(APPEND LINK_LIBRARIES glm)
 set(CMAKE_PREFIX_PATH "${PROJECT_EXT_DIR}/SFML/cmake")
 
 if (UNIX) #🐧❤️
-	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -g -fconcepts -Wunused-variable")
+	set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -fconcepts -Wunused-variable")
+	set(CMAKE_CXX_FLAGS_DEBUG "-g")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 	list(APPEND LINK_LIBRARIES ${X11_LIBRARIES})
 endif(UNIX)
 
