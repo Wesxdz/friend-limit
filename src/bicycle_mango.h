@@ -103,19 +103,19 @@ public:
     // Can this be considered to be part of a novel tuple?
     using CompatibleConstraint = std::function<bool(PropTypeId, const Stage&)>;
     // Can this prop be reused in novel tuples
-    using PartialStaticIndicators = std::unordered_map<PropTypeId, std::function<bool(const Stage&)>>;
+    using PartialStaticIndicators = std::unordered_map<PropTypeId, std::function<bool(std::set<Stage>&)>>;
     
     struct NovelTupleCreator
     {
         CompatibleConstraint compatible;
-        PartialStaticIndicators stageConstraints;
+        PartialStaticIndicators reuseOnStages;
     };
 
     static inline std::set<SunLambda::Id> emerges;
-    static void Emerge(SunLambda::Id id, CompatibleConstraint compatible = All, PartialStaticIndicators stageConstraints = {})
+    static void Emerge(SunLambda::Id id, CompatibleConstraint compatible = All)
     {
         emerges.insert(id);
-        novelTupleCreators[id] = {compatible, stageConstraints};
+        novelTupleCreators[id].compatible = compatible;
     }
     
     // Shared between emerge/plan/breakup: we assume a SunLambda cannot have multiple NovelTupleCreators for now
@@ -124,7 +124,7 @@ public:
     static inline std::unordered_map<SunLambda::Id, std::vector<std::vector<PropIdRaw>>> partialStatics;
     
     static inline CompatibleConstraint All = [](PropTypeId, const Stage&){return true;};
-    static void Plan(SunLambda::Id id, const ScheduleSpecificity& specificity, CompatibleConstraint compatible = All, PartialStaticIndicators stageConstraints = {})
+    static void Plan(SunLambda::Id id, const ScheduleSpecificity& specificity, CompatibleConstraint compatible = All)
     {
         SunSchedule schedule{id, specificity};
 
@@ -134,14 +134,14 @@ public:
         });
 
         schedules.insert(it, schedule);
-        novelTupleCreators[id] = {compatible, stageConstraints};
+        novelTupleCreators[id].compatible = compatible;
     }
     
     static inline std::set<SunLambda::Id> breakups;
-    static void Breakup(SunLambda::Id id, CompatibleConstraint compatible = All, PartialStaticIndicators stageConstraints = {})
+    static void Breakup(SunLambda::Id id, CompatibleConstraint compatible = All)
     {
         breakups.insert(id);
-        novelTupleCreators[id] = {compatible, stageConstraints};
+        novelTupleCreators[id].compatible = compatible;
     }
 
     template<typename T>
@@ -150,15 +150,8 @@ public:
     // I decided to place PropTypeId before Group this data structure because it is more commonly used this way in the code, even though the console works by query by group
     // TODO Will we need this later for faster console querying??
 //     using GroupTypeInstance = std::unordered_map<PropTypeId, std::unordered_map<Group, std::set<std::pair<Instance, PropIdRaw>>>>;
-    struct InstanceComparator
-    {
-        bool operator() (const auto& a, const auto& b) const
-        {
-            return a.group < b.group || a.instance < b.instance;
-        }
-    };
 
-    static inline std::unordered_map<PropTypeId, std::unordered_map<PropIdRaw, std::set<Stage, InstanceComparator>>> ptpsq; // Prop type prop stages query
+    static inline std::unordered_map<PropTypeId, std::unordered_map<PropIdRaw, std::set<Stage>>> ptpsq; // Prop type prop stages query
     // SHOULD WE ONLY STORE THIS INFORMATION FOR PARTIAL STATICS OR EVERYTHING???
 //     static inline std::unordered_map<PropTypeId, std::unordered_map<Group, std::unordered_map<Instance, std::set<PropIdRaw>>>> ptgid;
     
@@ -306,36 +299,29 @@ public:
                     if (novelTupleCreators.count((*sunlambda_it)) > 0)
                     {
                         NovelTupleCreator& creator = novelTupleCreators[(*sunlambda_it)];
-                        if (creator.stageConstraints.count(propTypeId) > 0)
+                        if (creator.reuseOnStages.count(propTypeId) > 0)
                         {
                             std::cout << "Has stage constraints!" << std::endl;
-                            auto& reuse = creator.stageConstraints[propTypeId];
-                            for (const Stage& stage : ptpsq[propTypeId][id])
+                            if(creator.reuseOnStages[propTypeId](ptpsq[propTypeId][id]))
                             {
-                                std::cout << "Test stage: " << stage << std::endl;
-                                if (reuse(stage))
+                                isAddedPropPartialStatic = true;
+                                size_t i = 0;
+                                for (const PropTypeId& ptid : (*typeset_it))
                                 {
-                                    std::cout << "REUSE PROP!!!!" << std::endl;
-                                    isAddedPropPartialStatic = true;
-                                    size_t i = 0;
-                                    for (const PropTypeId& ptid : (*typeset_it))
+                                    if (ptid == propTypeId)
                                     {
-                                        if (ptid == propTypeId)
+                                        // I really hope this automatically resizes lol
+                                        std::vector<std::vector<PropIdRaw>>& sad = partialStatics[(*sunlambda_it)];
+                                        if (sad.size() == 0)
                                         {
-                                            // I really hope this automatically resizes lol
-                                            std::vector<std::vector<PropIdRaw>>& sad = partialStatics[(*sunlambda_it)];
-                                            if (sad.size() == 0)
-                                            {
-                                                std::vector<PropIdRaw> p((*typeset_it).size());
-                                                sad.push_back(p);
-                                            }
-                                            std::cout << sad.size() << std::endl;
-                                            sad[0][i] = id; // TODO replace 0, WHICH PARTIAL STATIC TO CHOOSE?? creator.stageConstraints
-                                            
+                                            std::vector<PropIdRaw> p((*typeset_it).size());
+                                            sad.push_back(p);
                                         }
-                                        i++;
-                                        break;
+                                        std::cout << sad.size() << std::endl;
+                                        sad[0][i] = id; // TODO replace 0, WHICH PARTIAL STATIC TO CHOOSE?? creator.reuseOnStages
+                                        
                                     }
+                                    i++;
                                     break;
                                 }
                             }
@@ -499,6 +485,13 @@ public:
     {
         ResetProps();
         ResetSunLambdas();
+    }
+    
+    template <typename PropType>
+    static void Singleton(SunLambda::Id sunLambdaId)
+    {
+        BicycleMango::novelTupleCreators[sunLambdaId].reuseOnStages[BicycleMango::GetPropTypeId<PropType>()] = 
+                [](std::set<Stage>&){return true;};
     }
 
     template <typename PropType>

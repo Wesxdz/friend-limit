@@ -29,6 +29,10 @@ struct Stage
         // TODO magic_enum
         return output << "{" << stage.group << ", " << stage.instance << "}";
     }
+    friend bool operator<(const Stage& a, const Stage& b)
+    {
+        return a.group < b.group || a.instance < b.instance;
+    }
 };
 
 
