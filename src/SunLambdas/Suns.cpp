@@ -25,9 +25,9 @@ void RenderCursor_Act(WindowGameState& game, Mover& mover)
     cursor.setTexture(*Resources::inst->LoadTexture("cursor.png"));
     cursor.setOrigin(1, 1);
     sf::Vector2i cursorPos = mover.pos;
-//     cursorPos -= Movement::GetOffsetVector(mover.prevMove);
-    cursorPos.y--;
-//     Grid::Wrap(cursorPos);a
+    cursorPos -= Movement::GetOffsetVector(mover.prevMove);
+//     cursorPos.y--;
+    Grid::Wrap(cursorPos);
     cursor.setPosition(cursorPos.x * Grid::tile_width, Grid::offset_y + cursorPos.y * Grid::tile_height);
     game.window.draw(cursor);
 }
@@ -195,7 +195,7 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictS
         {
             if (hit.group == SNAKE_BODY || hit.group == SNAKE_TAIL)
             {
-                std::cout << "Snake bit himself!" << std::endl;
+//                 std::cout << "Snake bit himself!" << std::endl;
                 // Snake bites of his tail and reduced blood x2 for each 'follow part' removed
                 auto followPartBitten = std::find(ai.snakeParts.begin(), ai.snakeParts.end(), request.to);
                 if (ai.snakeParts.size() > 2)
@@ -223,13 +223,13 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictS
                 // Decide if we need to spawn a tail or body part
                 if (ai.snakeParts.size() == 1)
                 {
-                    std::cout << "Spawn snake tail" << std::endl;
+//                     std::cout << "Spawn snake tail" << std::endl;
                     grid.tiles[request.from.y][request.from.x] = BicycleMango::Next(SNAKE_TAIL);
                     ai.snakeParts.push_back({request.from.x, request.from.y});
                     grid.tiles[request.to.y][request.to.x] = current;
                 } else
                 {
-                    std::cout << "Spawn snake body" << std::endl;
+//                     std::cout << "Spawn snake body" << std::endl;
                     grid.tiles[request.from.y][request.from.x] = BicycleMango::Next(SNAKE_BODY);
                     ai.snakeParts.insert(ai.snakeParts.begin() + 1, {request.from.x, request.from.y});
                 }
