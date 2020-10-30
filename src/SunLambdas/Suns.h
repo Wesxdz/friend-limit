@@ -24,7 +24,7 @@ DeclareSunLambda(TickMoveEvent, MoveResolver&);
 // Declare MoveResolver and Grid can be reused with PartialStaticIndicators
 DeclareSunLambda(MoverDirectionChoiceAI, Grid&, Mover&, MoveResolver&);
 DeclareSunLambda(EvaluateMoves, Grid&, MoveResolver&, Mover&);
-DeclareSunLambda(ResolveMoves, MoveResolver&, Grid&, SnakeAI&, ConflictStats&, AudioManager&);
+DeclareSunLambda(ResolveMoves, MoveResolver&, Grid&, SnakeAI&, ConflictStats&, AudioManager&, MenuManager&);
 
 DeclareSunLambda(SetupGrid, Grid&);
 DeclareSunLambda(RenderGrid, WindowGameState&, Grid&, SnakeAI&);

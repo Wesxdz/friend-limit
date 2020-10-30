@@ -117,7 +117,10 @@ public:
         emerges.insert(id);
         novelTupleCreators[id].compatible = compatible;
     }
-    
+
+
+    static inline std::unordered_map<void*, PropIdRaw> pidq; // Prop id query
+
     // Shared between emerge/plan/breakup: we assume a SunLambda cannot have multiple NovelTupleCreators for now
     static inline std::unordered_map<SunLambda::Id, NovelTupleCreator> novelTupleCreators;
     // This data structure is an augment of potential neighbors when searching for props to form novel tuples
@@ -241,7 +244,8 @@ public:
     static PropType* AddProp(const GroupSet& stages)
     {
         auto [id, prop] = GetProps<PropType>().next();
-        prop.id = id;
+
+        pidq[(void*)&prop] = id;
 
         PropId<PropType> propId{id};
         AddPropStages(propId, stages);

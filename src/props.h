@@ -5,14 +5,14 @@
 #include "resources.h"
 #include "bicycle_mango.h"
 
-struct WindowGameState : Prop
+struct WindowGameState
 {
     static inline sf::RenderWindow window;
     std::map<sf::Event::EventType, std::vector<sf::Event>> events;
     bool focus = false;
 };
 
-struct MenuManager : Prop
+struct MenuManager
 {
     enum Status
     {
@@ -25,28 +25,28 @@ struct MenuManager : Prop
     sf::Clock sinceStart;
 };
 
-struct Sprite : Prop
+struct Sprite
 {
     sf::Sprite sprite;
 };
 
-struct Frames : Prop
+struct Frames
 {
     std::vector<sf::IntRect> frames;
 };
 
-struct FrameAnimator : Prop
+struct FrameAnimator
 {
     float progress;
     std::vector<sf::Time> frameTimes;
 };
 
-struct Camera : Prop
+struct Camera
 {
     sf::View view;
 };
 
-struct StatRenderInfo : Prop
+struct StatRenderInfo
 {
     sf::Font statFont;
     sf::Text blood;
@@ -54,13 +54,13 @@ struct StatRenderInfo : Prop
     sf::Vector2i swordsAnchorPos;
 };
 
-struct ConflictStats : Prop
+struct ConflictStats
 {
     int blood;
     int swords;
 };
 
-struct Grid : Prop
+struct Grid
 {
     static const int rows = 14;
     static const int cols = 16;
@@ -90,13 +90,13 @@ struct Grid : Prop
     }
 };
 
-struct AudioManager : Prop
+struct AudioManager
 {
     sf::Sound placeApple;
     sf::Sound eat;
 };
 
-struct MoveResolver : Prop
+struct MoveResolver
 {
     float timeBetweenMoves = 0.25f;
     sf::Clock moveTimer;
@@ -117,21 +117,21 @@ struct MoveResolver : Prop
 };
 
 #include "Direction.h"
-struct Mover : Prop
+struct Mover
 {
     sf::Vector2i pos;
     Direction prevMove;
     Direction nextMove;
 };
 
-struct SnakeAI : Prop
+struct SnakeAI
 {
     std::vector<sf::Vector2i> snakeParts;
     // TODO Non static
     static inline std::unordered_map<Group, int> magnets = {{SNAKE_TAIL, -100}, {SNAKE_BODY, -200}, {PEASANT, 100}, {KNIGHT, 70}, {HERO, 80}, {APPLE, 150}, {PLAYER, 100}};
 };
 
-struct Spawner : Prop
+struct Spawner
 {
     std::set<sf::Vector2i> spawnLocations;
 };

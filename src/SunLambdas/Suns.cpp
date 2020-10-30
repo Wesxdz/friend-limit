@@ -174,13 +174,14 @@ void EvaluateMoves_Act(Grid& grid, MoveResolver& resolver, Mover& mover)
     {
         Grid::Wrap(moveToPos);
     }
-    resolver.requestedMoves.push_back({mover.pos, moveToPos, mover.id});
+    resolver.requestedMoves.push_back({mover.pos, moveToPos, BicycleMango::pidq[(void*)&mover]});
 };
 
-void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictStats& stats, AudioManager& audio)
+void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictStats& stats, AudioManager& audio, MenuManager& menu)
 {
     if (!resolver.moveThisFrame) return;
     // TODO Sort by priority
+    auto movers = BicycleMango::GetProps<Mover>();
     for (MoveResolver::MoveRequest& request : resolver.requestedMoves)
     {
         bool moveSuccessful = true;
@@ -260,6 +261,7 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictS
         {
             if (hit.group == SNAKE_HEAD)
             {
+                menu.status = MenuManager::Status::GAME_OVER;
                 std::cout << "GAME OVER!" << std::endl;
                 FriendLimit::shouldSetupNewGame = true;
                 BicycleMango::brake = true;
