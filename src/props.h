@@ -25,11 +25,6 @@ struct MenuManager
     sf::Clock sinceStart;
 };
 
-struct Sprite
-{
-    sf::Sprite sprite;
-};
-
 struct Frames
 {
     std::vector<sf::IntRect> frames;

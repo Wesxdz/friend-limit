@@ -54,9 +54,9 @@ class BicycleMango
 public:
     // The time between the beginning and end of the last loop
     static inline sf::Time delta;
+    
     // Should the Bicycle Mango gameplay loop stop?
     static inline bool brake;
-
     
     struct SunSchedule
     {
@@ -73,6 +73,7 @@ public:
         {
             SunLambdaRegistry::GetInstance().Get(schedule.id)();
         }
+        RemovePropsDelayed();
 
 #ifdef HOT_RELOAD
         if(ShouldReloadLambdas)
@@ -97,12 +98,17 @@ public:
     }
 #endif
 
+    // An internal id used to access vectors of props of a specific struct type
     using PropTypeId = size_t;
+    
+    // Props are stored in contiguous vectors and are accessed sequentially by their raw id
     using PropIdRaw = size_t;
+    
     // ALL STAGES OF A PROP MUST RETURN TRUE ON THE COMPATIBILITY CONSTRAINT FOR THAT PROP TO BE CONSIDERED TO FORM PART OF A NOVEL TUPLE OF THE SunLambda::Id WHICH HAS THIS CompatibleConstraint AS PART OF ITS NovelTupleCreator
-    // Can this be considered to be part of a novel tuple?
+    // A user provided function set per SunLambda that determines if props can be considered part of a novel tuple
     using CompatibleConstraint = std::function<bool(PropTypeId, const Stage&)>;
-    // Can this prop be reused in novel tuples
+
+    // A user provided Can this prop be reused in novel tuples
     using PartialStaticIndicators = std::unordered_map<PropTypeId, std::function<bool(std::set<Stage>&)>>;
     
     struct NovelTupleCreator
@@ -111,6 +117,7 @@ public:
         PartialStaticIndicators reuseOnStages;
     };
 
+    // Emerges are called when a novel tuple is formed
     static inline std::set<SunLambda::Id> emerges;
     static void Emerge(SunLambda::Id id, CompatibleConstraint compatible = All)
     {
@@ -118,11 +125,30 @@ public:
         novelTupleCreators[id].compatible = compatible;
     }
 
+    // Breakups are called when a one or more of the props in a novel tuple are removed
+    static inline std::set<SunLambda::Id> breakups;
+    static void Breakup(SunLambda::Id id, CompatibleConstraint compatible = All)
+    {
+        breakups.insert(id);
+        novelTupleCreators[id].compatible = compatible;
+    }
 
-    static inline std::unordered_map<void*, PropIdRaw> pidq; // Prop id query
+    /*
+     * Find a prop's raw id from its pointer address and type
+     * This is required for storing references to props for access in subsequent SunLambdas
+    */
+    template <typename T>
+    static PropIdRaw GetPropId(void* propAddress)
+    {
+        auto& props = GetProps<T>();
+        uintptr_t offset = (reinterpret_cast<uintptr_t>(propAddress) - reinterpret_cast<uintptr_t>(&props.buffer[0]));
+        PropIdRaw pidr = offset/(sizeof(T) + sizeof(bool));
+        return pidr;
+    }
 
     // Shared between emerge/plan/breakup: we assume a SunLambda cannot have multiple NovelTupleCreators for now
     static inline std::unordered_map<SunLambda::Id, NovelTupleCreator> novelTupleCreators;
+
     // This data structure is an augment of potential neighbors when searching for props to form novel tuples
     static inline std::unordered_map<SunLambda::Id, std::vector<std::vector<PropIdRaw>>> partialStatics;
     
@@ -137,13 +163,6 @@ public:
         });
 
         schedules.insert(it, schedule);
-        novelTupleCreators[id].compatible = compatible;
-    }
-    
-    static inline std::set<SunLambda::Id> breakups;
-    static void Breakup(SunLambda::Id id, CompatibleConstraint compatible = All)
-    {
-        breakups.insert(id);
         novelTupleCreators[id].compatible = compatible;
     }
 
@@ -169,8 +188,8 @@ public:
     static inline std::unordered_map<PropTypeId, std::set<Typeset>> mappedPropTupleTypesets;
     static inline std::set<Typeset> globalPropTupleTypesets;
 
-    // Each typeset stores a map of types to props which have been added and have not been formed into novel tuples of this SunLambda typeset yet
-    // Partial static indicators that return true
+    // Each SunLambda stores a map of props of types in its typeset which have been added but not formed into novel tuples yet
+    // Partial static indicators that return true indicate that a prop can be reused in multiple novel tuples of the same SunLambda
     static inline std::map<SunLambda::Id, std::unordered_map<PropTypeId, std::vector<PropIdRaw>>> stagingPropTuples;
     
     static inline std::map<SunLambda::Id, std::vector<std::vector<GlobalPropId>>> novelTuples;
@@ -205,7 +224,6 @@ public:
     }
 
     // Prop ----------------
-    
     static inline std::unordered_map<PropTypeId, std::string> propTypeNames;
 
     template <typename T>
@@ -240,12 +258,11 @@ public:
         }
     }
     
+    // TODO: Should adding props be delayed to beginning of next frame? Prop removal needs to work during frames when props are added
     template<typename PropType>
     static PropType* AddProp(const GroupSet& stages)
     {
         auto [id, prop] = GetProps<PropType>().next();
-
-        pidq[(void*)&prop] = id;
 
         PropId<PropType> propId{id};
         AddPropStages(propId, stages);
@@ -459,18 +476,124 @@ public:
     }
 
     // Props should only be removed by stage rather than considering type
-    static void RemovePropsWithStage(Stage stage)
+    using PropRemovalSearch = std::function<bool(std::set<Stage>&)>;
+
+    // Delay prop removal until the end of the current frame
+    static inline std::unordered_map<PropTypeId, std::set<PropIdRaw>> propsToRemove;
+
+    static inline std::unordered_map<SunLambda::Id, std::set<size_t>> tuplesToBreakup;
+
+    static void RemoveProps(PropRemovalSearch Remove)
     {
-        // Find all props with the stage
-        // Remove all novel tuples that contain at least one of these props
-        // Restage
+        for (auto& propCategory : propTypeNames)
+        {
+            PropTypeId propTypeId = propCategory.first;
+            for (auto& propData: ptpsq[propTypeId])
+            {
+                if (Remove(propData.second))
+                {
+                    propsToRemove[propTypeId].insert(propData.first);
+                }
+            }
+        }
+        for (auto& propTypeProps : propsToRemove)
+        {
+            // Find the Typesets that contain this proptypeid
+            for (const Typeset& typeset : mappedPropTupleTypesets[propTypeProps.first])
+            {
+                size_t typesetRemovalIndex = 0;
+                for (size_t i = 0; i < typeset.size(); i++)
+                {
+                    if (typeset[i] == propTypeProps.first)
+                    {
+                        typesetRemovalIndex = i;
+                        break;
+                    }
+                }
+                for (SunLambda::Id& sun : typesetSunLambdas[typeset])
+                {
+                    size_t index = 0;
+                    for (auto& novelTuple : novelTuples[sun])
+                    {
+                        if (propTypeProps.second.count(novelTuple[typesetRemovalIndex].id))
+                        {
+                            tuplesToBreakup[sun].insert(index);
+                        }
+                        index++;
+                    }
+                }
+            }
+        }
     }
+
+    static void RemovePropsDelayed()
+    {
+        // TODO:
+        // Remove props from partialStatics
+        // Remove props from staging
+        // Add props that were not removed and are not partial statics back to staging
+        for (auto& broken : tuplesToBreakup)
+        {
+            size_t i = 0;
+            for (PropTypeId& ptid : sunLambdaTypesets[broken.first])
+            {
+                if (propsToRemove.count(ptid) && propsToRemove.find(partialStatics[broken.first][i]))
+                i++;
+            }
+            // iterate through proptypeids of sunlambda with this id
+            // for (PropTypeId& propTypeId : sunLambdaTypesets[broken.first])
+            // {
+            //     if (propsToRemove[propTypeId].count(stagingPropTuples[broken.first][propTypeId][]))
+            // }
+            for (auto tuple_it = broken.second.rbegin(); tuple_it != broken.second.rend(); ++tuple_it)
+            {
+                // TODO: make this more efficient by swapping values to end and then erasing ending range
+                auto tuple = novelTuples[broken.first].begin() + (*tuple_it);
+                // TODO: Iterate through the tuple, checking and removing any partial static if it is contained in propsToRemove
+                for (GlobalPropId& gpid : *tuple)
+                {
+                    if (propsToRemove.count(gpid.typeId) && propsToRemove[gpid.typeId].count(gpid.id))
+                    {
+                        if (partialStatics.count(broken.first))
+                        {
+
+                        }
+                    }
+                }
+                novelTuples[broken.first].erase(tuple);
+            }
+        }
+
+        // Call breakups
+        for (auto& propData : propsToRemove)
+        {
+            for (const PropIdRaw& propId : propData.second)
+            {
+                // Make stages used by prop available
+                for (auto& stage : ptpsq[propData.first][propId])
+                {
+                    instanceBuffer[stage.group].free(stage.instance);
+                }
+                ptpsq[propData.first].erase(propId);
+            }
+            if (ptpsq[propData.first].size() == 0)
+            {
+                ptpsq.erase(propData.first);
+            }
+        }
+        
+        propsToRemove.clear();
+        tuplesToBreakup.clear();
+    }
+
+    // GetPropTypeId<PropType>
+    // static void RemovePropsOfType()
     
     // Let's start over
     static void ResetProps()
     {
-        partialStatics.clear();
         ptpsq.clear();
+        partialStatics.clear();
         stagingPropTuples.clear();
         novelTuples.clear();
         instanceBuffer.clear();

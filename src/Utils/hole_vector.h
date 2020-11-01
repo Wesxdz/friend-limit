@@ -5,13 +5,13 @@
 template<typename T, typename Id = size_t>
 class HoleVector
 {
+public:
 	struct Hole
 	{
 		bool fill = false;
 		T object = {};
 	};
-
-public:
+    
 	class iterator
     {
         public:

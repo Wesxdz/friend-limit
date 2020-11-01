@@ -16,6 +16,7 @@ enum GROUP : Group
     
     SNAKE,
     GAME_STATE,
+    WINDOW,
     TITLE_SCREEN,
     
     PLAYER,

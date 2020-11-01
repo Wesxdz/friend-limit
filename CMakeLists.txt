@@ -11,7 +11,7 @@ set(CMAKE_BUILD_TYPE Release)
 # set(CMAKE_BUILD_TYPE Debug)
 
 # You can check for this in C++ with '#ifdef HOT_RELOAD'
-set(HOT_RELOAD False)
+set(HOT_RELOAD True)
 
 project(${GAME_NAME})
 

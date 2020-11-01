@@ -6,14 +6,14 @@
 #include "Direction.h"
 #include "FriendLimit.h"
 
-void EnterGame_Act(WindowGameState& game, MenuManager& menu, Sprite& background)
+void EnterGame_Act(WindowGameState& game, MenuManager& menu)
 {
     if (game.events.count(sf::Event::EventType::KeyPressed))
     {
         if (menu.status == MenuManager::TITLE || menu.status == MenuManager::GAME_OVER)
         {
             menu.status = MenuManager::PLAYING;
-            background.sprite.setTexture(*Resources::inst->LoadTexture("play-area.png"));
+            // background.sprite.setTexture(*Resources::inst->LoadTexture("play-area.png"));
             FriendLimit::SetupGameplay();
         }
     }
@@ -174,7 +174,7 @@ void EvaluateMoves_Act(Grid& grid, MoveResolver& resolver, Mover& mover)
     {
         Grid::Wrap(moveToPos);
     }
-    resolver.requestedMoves.push_back({mover.pos, moveToPos, BicycleMango::pidq[(void*)&mover]});
+    resolver.requestedMoves.push_back({mover.pos, moveToPos, BicycleMango::GetPropId<Mover>(&mover)});
 };
 
 void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictStats& stats, AudioManager& audio, MenuManager& menu)
@@ -315,11 +315,11 @@ void RenderGrid_Act(WindowGameState& game, Grid& grid, SnakeAI& ai)
                     break;
                 case SNAKE_BODY:
                 case SNAKE_TAIL:
-                    for (int i = 0; i < ai.snakeParts.size(); i++)
+                    for (size_t i = 0; i < ai.snakeParts.size(); i++)
                     {
                         if (ai.snakeParts[i] == sf::Vector2i{col, row})
                         {
-                            int tone = std::max(64, 255 - ((i/3) * 32));
+                            int tone = std::max(64, 255 - (((int)i/3) * 32));
                             tiles.setColor(sf::Color(tone, tone, tone));
                         }
                     }
@@ -344,11 +344,6 @@ void DisplayUpdateStats_Act(WindowGameState& game, StatRenderInfo& statInfo, Con
     statInfo.swords.setString(std::to_string(stats.swords));
     statInfo.swords.setPosition(statInfo.swordsAnchorPos.x - statInfo.swords.getLocalBounds().width, statInfo.swordsAnchorPos.y);
     game.window.draw(statInfo.swords);
-}
-
-void SpriteRenderer_Act(WindowGameState& game, Sprite& sprite)
-{
-    game.window.draw(sprite.sprite);
 }
 
 void PollWindowEvents_Act(WindowGameState& game)

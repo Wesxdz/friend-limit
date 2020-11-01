@@ -26,15 +26,16 @@ public:
         soundtrack.setLoop(true);
         soundtrack.play();
         FriendLimit::SetupSunLambdas();
+        FriendLimit::SetupWindow();
         do {
             BicycleMango::brake = false;
-            FriendLimit::SetupWindow();
             shouldSetupNewGame = false;
             while (!BicycleMango::brake)
             {
                 BicycleMango::Loop();
             }
-            BicycleMango::ResetProps();
+            BicycleMango::RemoveProps([](std::set<Stage>& stages) { return stages.count({GAME_STATE, 0}); });
+            // BicycleMango::Reset();
         } while (shouldSetupNewGame);
         
         delete Resources::inst;
@@ -68,7 +69,6 @@ public:
         
         BicycleMango::Plan(ResolveMoves::Id(), {UPDATE, 150});
         BicycleMango::Plan(DisplayWindow::Id(), {DISPLAY});
-        BicycleMango::Plan(SpriteRenderer::Id(), {RENDER});
         BicycleMango::Plan(RenderGrid::Id(), {RENDER, 5});
         BicycleMango::Plan(RenderCursor::Id(), {RENDER, 50}, moverIsPlayer);
         BicycleMango::Plan(DisplayUpdateStats::Id(), {RENDER, 100});
@@ -80,14 +80,13 @@ public:
     
     static void SetupWindow()
     {
-        auto game = BicycleMango::AddProp<WindowGameState>({{GAME_STATE, 0}}); // I want to specify that this prop can be reused in multiple novel tuples
+        auto game = BicycleMango::AddProp<WindowGameState>({{WINDOW, 0}}); // I want to specify that this prop can be reused in multiple novel tuples
         // More generically, I want to specify that ANY prop of WindowGameState can be reused in multiple novel tuples on GAME_STATE
         game->window.setVerticalSyncEnabled(true);
         game->window.setKeyRepeatEnabled(false);
         game->window.create(sf::VideoMode(128, 160), "Friend Limit", sf::Style::Titlebar | sf::Style::Close);
-        auto title = BicycleMango::AddProp<Sprite>({{GAME_STATE, 0}, {TITLE_SCREEN, 0}});
-        title->sprite.setTexture(*Resources::inst->LoadTexture("title.png"));
-        BicycleMango::AddProp<MenuManager>({{GAME_STATE, 0}});
+        // title->sprite.setTexture(*Resources::inst->LoadTexture("title.png"));
+        BicycleMango::AddProp<MenuManager>({{WINDOW, 0}});
     }
     
     static void SetupGameplay()
@@ -112,7 +111,7 @@ public:
         
         auto audio = BicycleMango::AddProp<AudioManager>({{GAME_STATE, 0}});
         audio->placeApple.setBuffer(*Resources::inst->LoadSoundBuffer("place-apple.wav"));
-        audio->eat.setBuffer(*Resources::inst->LoadSoundBuffer("op1/eat.wav"));
+        audio->eat.setBuffer(*Resources::inst->LoadSoundBuffer("eat.wav"));
         
         auto grid = BicycleMango::AddProp<Grid>({{GAME_STATE, 0}});
         auto moveResolver = BicycleMango::AddProp<MoveResolver>({{GAME_STATE, 0}});
