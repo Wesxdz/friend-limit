@@ -3,6 +3,7 @@
 
 ```
 git clone --recurse-submodules https://github.com/Wesxdz/friend-limit.git
+cd friend-limit
 mkdir build
 cd build
 cmake ..
