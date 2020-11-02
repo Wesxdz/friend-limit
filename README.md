@@ -2,12 +2,12 @@
 #### Ludum Dare 46 - "Keep it alive."
 
 ```
-git clone --recurse-submodules https://github.com/Wesxdz/friend-limit.git
-cd friend-limit
-mkdir build
-cd build
-cmake ..
-make -j16
+git clone https://github.com/Wesxdz/friend-limit.git &&
+cd friend-limit &&
+mkdir build &&
+cd build &&
+cmake .. &&
+make -j16 &&
 ./friendlimit
 ```
 ![](design/gameplay.gif)

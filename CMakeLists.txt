@@ -38,11 +38,7 @@ elseif ( MSVC )
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /W4")
 endif()
 
-# add_subdirectory("${PROJECT_EXT_DIR}/SFML")
-add_subdirectory("${PROJECT_EXT_DIR}/glm")
-
 list(APPEND LINK_LIBRARIES sfml-graphics sfml-window sfml-system sfml-audio)
-list(APPEND LINK_LIBRARIES glm)
 
 set(CMAKE_PREFIX_PATH "${PROJECT_EXT_DIR}/SFML/cmake")
 

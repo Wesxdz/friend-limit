@@ -15,7 +15,6 @@
 #include <utility>
 #include <vector>
 
-#include <glm/glm.hpp>
 #include <SFML/System/Clock.hpp>
 #include <SFML/System.hpp>
 
