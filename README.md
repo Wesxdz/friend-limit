@@ -21,3 +21,5 @@ cmake ..
 make -j16
 ./friendlimit
 ```
+
+![](design/gameplay.gif)
