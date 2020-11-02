@@ -87,8 +87,8 @@ public:
 
 	std::pair<Id, T&> next()
 	{
-		// const Id id = idPool.next();
-        const Id id = Pool::ids[Pool::GetPropTypeId<T>()].next();
+		const Id id = idPool.next();
+        // const Id id = Pool::ids[Pool::GetPropTypeId<T>()].next();
 
 		if(id >= (buffer.size() - 1))
 		{
@@ -102,12 +102,13 @@ public:
 		return {id, hole.object};
 	}
 
-	void free(T id)
+	void free(Id id)
 	{
-        buffer[id].object = T();
-		buffer[id] = {};
-		// idPool.free(id);
-        Pool::ids[Pool::GetPropTypeId<T>()].free(id);
+        std::cout << "Freeing hole vector" << std::endl;
+        buffer[id].object.~T();
+        buffer[id].fill = false;
+		idPool.free(id);
+        // Pool::ids[Pool::GetPropTypeId<T>()].free(id);
 	}
 
 	HoleVector()
@@ -128,5 +129,5 @@ public:
 
 //private:
 	std::vector<Hole> buffer;
-	// IdPool<Id, true> idPool;
+	IdPool<Id, true> idPool;
 };

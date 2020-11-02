@@ -231,6 +231,8 @@ public:
         functor(GetProps<std::decay_t<PTypes>>()[sunData[Is]]...);
     }
 
+    static inline std::unordered_map<PropTypeId, std::function<void(PropIdRaw)>> freeFunctions;
+
     // Prop ----------------
     static inline std::unordered_map<PropTypeId, std::string> propTypeNames;
 
@@ -238,7 +240,8 @@ public:
     static constexpr PropTypeId GetPropTypeId()
     {
         const PropTypeId id = std::type_index(typeid(std::decay_t<T>)).hash_code();
-        propTypeNames[id] = std::type_index(typeid(std::decay_t<T>)).name();
+        propTypeNames[id] = std::type_index(typeid(std::decay_t<T>)).name(); 
+        freeFunctions[id] = [&](PropIdRaw pidr){GetProps<T>().free(pidr);};
         return id;
     }
     
@@ -568,7 +571,7 @@ public:
             for (const PropIdRaw& propId : propData.second)
             {
                 // Condense pool by reuse
-                Pool::ids[propData.first].free(propId);
+                freeFunctions[propData.first](propId);
                 // Make stages used by prop available
                 for (auto& stage : ptpsq[propData.first][propId])
                 {
