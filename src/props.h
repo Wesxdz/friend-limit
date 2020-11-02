@@ -111,6 +111,7 @@ struct MoveResolver
     // We need to resolve moves by having the higher priority moves happen first in case two things try to move onto the same tile
     // For example, SNAKE_HEAD should move onto a tile after KNIGHT or PLAYER
     std::map<Group, int> movePriority = {{SNAKE_HEAD, 50}, {SNAKE_BODY, 40}, {SNAKE_TAIL, 30}, {PEASANT, 60}, {KNIGHT, 70}, {HERO, 80}, {PLAYER, 100}};
+    ~MoveResolver() { requestedMoves.clear(); }
 };
 
 #include "Direction.h"
@@ -126,6 +127,11 @@ struct SnakeAI
     std::vector<sf::Vector2i> snakeParts;
     // TODO Non static
     static inline std::unordered_map<Group, int> magnets = {{SNAKE_TAIL, -100}, {SNAKE_BODY, -200}, {PEASANT, 100}, {KNIGHT, 70}, {HERO, 80}, {APPLE, 150}, {PLAYER, 100}};
+    ~SnakeAI() 
+    {
+        std::cout << "Clearing snake parts" << std::endl;
+        snakeParts.clear(); 
+    }
 };
 
 struct Spawner

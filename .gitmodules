@@ -1,6 +1,3 @@
-[submodule "submodule/glm"]
-	path = submodule/glm
-	url = https://github.com/g-truc/glm.git
 [submodule "submodule/submodule/glm"]
 	path = submodule/submodule/glm
 	url = https://github.com/g-truc/glm.git

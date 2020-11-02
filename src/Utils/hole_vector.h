@@ -1,5 +1,6 @@
 #pragma once
 
+#include "data.h"
 #include "id_pool.h"
 
 template<typename T, typename Id = size_t>
@@ -86,7 +87,8 @@ public:
 
 	std::pair<Id, T&> next()
 	{
-		const Id id = idPool.next();
+		// const Id id = idPool.next();
+        const Id id = Pool::ids[Pool::GetPropTypeId<T>()].next();
 
 		if(id >= (buffer.size() - 1))
 		{
@@ -102,8 +104,10 @@ public:
 
 	void free(T id)
 	{
+        buffer[id].object = T();
 		buffer[id] = {};
-		idPool.free(id);
+		// idPool.free(id);
+        Pool::ids[Pool::GetPropTypeId<T>()].free(id);
 	}
 
 	HoleVector()
@@ -124,5 +128,5 @@ public:
 
 //private:
 	std::vector<Hole> buffer;
-	IdPool<Id, true> idPool;
+	// IdPool<Id, true> idPool;
 };

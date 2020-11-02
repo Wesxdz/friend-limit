@@ -2,17 +2,16 @@ cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(GAME_NAME friendlimit)
 set(SOURCE_PATH "src") # Relative to PROJECT_SOURCE_DIR
 set(GAME_LAMBDAS "${GAME_NAME}_lambdas")
 
-set(CMAKE_BUILD_TYPE Release)
-# set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_BUILD_TYPE Debug)
 
 # You can check for this in C++ with '#ifdef HOT_RELOAD'
-set(HOT_RELOAD False)
+set(HOT_RELOAD True)
 
 project(${GAME_NAME})
 
@@ -21,7 +20,6 @@ file(GLOB_RECURSE SOURCES "${SOURCE_PATH}/*.cpp")
 if(HOT_RELOAD)
 # Will fail to build (NO SOURCES) if there are no SunLambdas
 	file(GLOB_RECURSE SUNLAMBDAS_SOURCES "${SOURCE_PATH}/SunLambdas/*.cpp")
-# 	file(GLOB_RECURSE SUNLAMBDAS_SOURCES "${SOURCE_PATH}/Jolts/*.cpp")
 	add_library(${GAME_LAMBDAS} "${SUNLAMBDAS_SOURCES}")
 
 	add_compile_definitions("${GAME_NAME}" HOT_RELOAD)
@@ -68,10 +66,5 @@ if(HOT_RELOAD)
 endif()
 
 add_custom_command(TARGET ${GAME_NAME} POST_BUILD 
-	# COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-system> $<TARGET_FILE_DIR:${GAME_NAME}>/
-	# COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-window> $<TARGET_FILE_DIR:${GAME_NAME}>/
-	# COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-graphics> $<TARGET_FILE_DIR:${GAME_NAME}>/
-	# COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-audio> $<TARGET_FILE_DIR:${GAME_NAME}>/
-	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_EXT_DIR}/SFML/extlibs/bin/x64 $<TARGET_FILE_DIR:${GAME_NAME}>/
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/resources $<TARGET_FILE_DIR:${GAME_NAME}>/resources
 )

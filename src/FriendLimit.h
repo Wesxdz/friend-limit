@@ -19,17 +19,10 @@ public:
         Resources::inst = new Resources();
         FriendLimit::SetupSunLambdas();
         FriendLimit::SetupWindow();
-        do {
-            BicycleMango::brake = false;
-            shouldSetupNewGame = false;
-            while (!BicycleMango::brake)
-            {
-                BicycleMango::Loop();
-            }
-            BicycleMango::RemoveProps([](std::set<Stage>& stages) { return !stages.count({WINDOW, 0}); });
-            // BicycleMango::Reset();
-        } while (shouldSetupNewGame);
-        
+        while (!BicycleMango::brake)
+        {
+            BicycleMango::Loop();
+        }
         delete Resources::inst;
     }
     static void SetupSunLambdas()
@@ -129,7 +122,5 @@ public:
         auto playerMover = BicycleMango::AddProp<Mover>({{PLAYER, 0}, {GAME_STATE, 0}});
         playerMover->pos = {1, 1};
         playerMover->prevMove = playerMover->nextMove = Direction::SOUTH;
-
-        BicycleMango::RemoveProps([](std::set<Stage>& stages) { return stages.count({PLAYER, 0}); });
     }
 };

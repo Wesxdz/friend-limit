@@ -8,7 +8,7 @@
 
 void EnterGame_Act(WindowGameState& game, MenuManager& menu, AudioManager& audio)
 {
-    if (game.events.count(sf::Event::EventType::KeyPressed))
+    if (!game.events[sf::Event::EventType::KeyPressed].empty())
     {
         if (menu.status == MenuManager::TITLE || menu.status == MenuManager::GAME_OVER)
         {
@@ -204,6 +204,7 @@ void EvaluateMoves_Act(Grid& grid, MoveResolver& resolver, Mover& mover)
 void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictStats& stats, AudioManager& audio, MenuManager& menu)
 {
     if (!resolver.moveThisFrame) return;
+    std::cout << ai.snakeParts.size() << std::endl;
     // TODO Sort by priority
     auto movers = BicycleMango::GetProps<Mover>();
     for (MoveResolver::MoveRequest& request : resolver.requestedMoves)
@@ -222,8 +223,7 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictS
             std::cout << "GAME OVER!" << std::endl;
             menu.background.setTexture(*Resources::inst->LoadTexture("game-over.png"));
             audio.soundtrack->stop();
-            FriendLimit::shouldSetupNewGame = true;
-            BicycleMango::brake = true;
+            BicycleMango::RemoveProps([](std::set<Stage>& stages) { return !stages.count({WINDOW, 0}); });
         };
         if (current.group == SNAKE_HEAD)
         {
