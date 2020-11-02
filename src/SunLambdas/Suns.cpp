@@ -6,17 +6,26 @@
 #include "Direction.h"
 #include "FriendLimit.h"
 
-void EnterGame_Act(WindowGameState& game, MenuManager& menu)
+void EnterGame_Act(WindowGameState& game, MenuManager& menu, AudioManager& audio)
 {
     if (game.events.count(sf::Event::EventType::KeyPressed))
     {
         if (menu.status == MenuManager::TITLE || menu.status == MenuManager::GAME_OVER)
         {
             menu.status = MenuManager::PLAYING;
-            // background.sprite.setTexture(*Resources::inst->LoadTexture("play-area.png"));
+            menu.background.setTexture(*Resources::inst->LoadTexture("play-area.png"));
+            if (audio.soundtrack->getStatus() != sf::SoundSource::Playing)
+            {
+                audio.soundtrack->play();
+            }
             FriendLimit::SetupGameplay();
         }
     }
+}
+
+void RenderBackground_Act(WindowGameState& game, MenuManager& menu)
+{
+    game.window.draw(menu.background);
 }
 
 void RenderCursor_Act(WindowGameState& game, Mover& mover)
@@ -54,6 +63,19 @@ void PlayerPlaceTiles_Act(WindowGameState& game, Grid& grid, Mover& mover, Audio
                 }
                 grid.tiles[placePos.y][placePos.x] = BicycleMango::Next(APPLE);
             }
+        }
+    }
+}
+
+void Test_Act(WindowGameState& game)
+{
+    for (auto& event : game.events[sf::Event::EventType::KeyPressed])
+    {
+        if (event.key.code == sf::Keyboard::Key::C)
+        {
+            auto playerMover = BicycleMango::AddProp<Mover>({{PLAYER, 0}, {GAME_STATE, 0}});
+            playerMover->pos = {1, 1};
+            playerMover->prevMove = playerMover->nextMove = Direction::SOUTH;
         }
     }
 }
@@ -96,7 +118,9 @@ void SetupGrid_Act(Grid& grid)
         }
     }
     grid.tiles[1][1] = {PLAYER, 0};
-    grid.tiles[grid.rows - 2][grid.cols - 2] = {SNAKE_HEAD, 0};
+    grid.tiles[5][6] = {APPLE, 0};
+    grid.tiles[5][10] = {SNAKE_HEAD, 0};
+    // grid.tiles[grid.rows - 2][grid.cols - 2] = {SNAKE_HEAD, 0};
 }
 
 void TickMoveEvent_Act(MoveResolver& resolver)
@@ -192,6 +216,15 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictS
             audio.eat.play();
         }
         // TODO Respond to all stages interaction
+        auto gameOver = [&menu, &audio]()
+        {
+            menu.status = MenuManager::Status::GAME_OVER;
+            std::cout << "GAME OVER!" << std::endl;
+            menu.background.setTexture(*Resources::inst->LoadTexture("game-over.png"));
+            audio.soundtrack->stop();
+            FriendLimit::shouldSetupNewGame = true;
+            BicycleMango::brake = true;
+        };
         if (current.group == SNAKE_HEAD)
         {
             if (hit.group == SNAKE_BODY || hit.group == SNAKE_TAIL)
@@ -214,9 +247,7 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictS
             }
             if (hit.group == PLAYER)
             {
-                std::cout << "GAME OVER!" << std::endl;
-                FriendLimit::shouldSetupNewGame = true;
-                BicycleMango::brake = true;
+                gameOver();
             }
             bool growSnake = hit.group == APPLE;
             if (growSnake)
@@ -261,10 +292,7 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictS
         {
             if (hit.group == SNAKE_HEAD)
             {
-                menu.status = MenuManager::Status::GAME_OVER;
-                std::cout << "GAME OVER!" << std::endl;
-                FriendLimit::shouldSetupNewGame = true;
-                BicycleMango::brake = true;
+                gameOver();
             }
             const std::set<Group> playerBlockedBy = {SNAKE_BODY, SNAKE_TAIL, KNIGHT, PEASANT, HERO};
             if (playerBlockedBy.count(hit.group))

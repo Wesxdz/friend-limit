@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.1)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(GAME_NAME friendlimit)
 set(SOURCE_PATH "src") # Relative to PROJECT_SOURCE_DIR
@@ -11,7 +12,7 @@ set(CMAKE_BUILD_TYPE Release)
 # set(CMAKE_BUILD_TYPE Debug)
 
 # You can check for this in C++ with '#ifdef HOT_RELOAD'
-set(HOT_RELOAD True)
+set(HOT_RELOAD False)
 
 project(${GAME_NAME})
 
@@ -39,7 +40,7 @@ elseif ( MSVC )
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /W4")
 endif()
 
-add_subdirectory("${PROJECT_EXT_DIR}/SFML")
+# add_subdirectory("${PROJECT_EXT_DIR}/SFML")
 add_subdirectory("${PROJECT_EXT_DIR}/glm")
 
 list(APPEND LINK_LIBRARIES sfml-graphics sfml-window sfml-system sfml-audio)
@@ -67,10 +68,10 @@ if(HOT_RELOAD)
 endif()
 
 add_custom_command(TARGET ${GAME_NAME} POST_BUILD 
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-system> $<TARGET_FILE_DIR:${GAME_NAME}>/
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-window> $<TARGET_FILE_DIR:${GAME_NAME}>/
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-graphics> $<TARGET_FILE_DIR:${GAME_NAME}>/
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-audio> $<TARGET_FILE_DIR:${GAME_NAME}>/
+	# COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-system> $<TARGET_FILE_DIR:${GAME_NAME}>/
+	# COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-window> $<TARGET_FILE_DIR:${GAME_NAME}>/
+	# COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-graphics> $<TARGET_FILE_DIR:${GAME_NAME}>/
+	# COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:sfml-audio> $<TARGET_FILE_DIR:${GAME_NAME}>/
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_EXT_DIR}/SFML/extlibs/bin/x64 $<TARGET_FILE_DIR:${GAME_NAME}>/
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/resources $<TARGET_FILE_DIR:${GAME_NAME}>/resources
 )

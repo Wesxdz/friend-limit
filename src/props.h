@@ -23,6 +23,7 @@ struct MenuManager
     } status = TITLE;
     Status transitionTo; // Need to delay transition so sountrack can match up with beat
     sf::Clock sinceStart;
+    sf::Sprite background;
 };
 
 struct Frames
@@ -87,6 +88,7 @@ struct Grid
 
 struct AudioManager
 {
+    std::unique_ptr<sf::Music> soundtrack;
     sf::Sound placeApple;
     sf::Sound eat;
 };

@@ -17,6 +17,7 @@
 
 #include <glm/glm.hpp>
 #include <SFML/System/Clock.hpp>
+#include <SFML/System.hpp>
 
 #include "specificity.h"
 #include "Utils/hole_vector.h"
@@ -54,6 +55,8 @@ class BicycleMango
 public:
     // The time between the beginning and end of the last loop
     static inline sf::Time delta;
+
+    static inline sf::Time targetFrameRate = sf::seconds(1.0f/144.0f);
     
     // Should the Bicycle Mango gameplay loop stop?
     static inline bool brake;
@@ -84,6 +87,11 @@ public:
 #endif
 
         delta = clock.getElapsedTime() - startTime;
+        if (delta < targetFrameRate)
+        {
+            sf::sleep(targetFrameRate - delta);
+            delta = targetFrameRate;
+        }
     }
 
 #ifdef HOT_RELOAD
@@ -150,7 +158,7 @@ public:
     static inline std::unordered_map<SunLambda::Id, NovelTupleCreator> novelTupleCreators;
 
     // This data structure is an augment of potential neighbors when searching for props to form novel tuples
-    static inline std::unordered_map<SunLambda::Id, std::vector<std::vector<PropIdRaw>>> partialStatics;
+    static inline std::unordered_map<SunLambda::Id, std::unordered_map<PropTypeId, std::vector<PropIdRaw>>> partialStatics;
     
     static inline CompatibleConstraint All = [](PropTypeId, const Stage&){return true;};
     static void Plan(SunLambda::Id id, const ScheduleSpecificity& specificity, CompatibleConstraint compatible = All)
@@ -326,25 +334,7 @@ public:
                             if(creator.reuseOnStages[propTypeId](ptpsq[propTypeId][id]))
                             {
                                 isAddedPropPartialStatic = true;
-                                size_t i = 0;
-                                for (const PropTypeId& ptid : (*typeset_it))
-                                {
-                                    if (ptid == propTypeId)
-                                    {
-                                        // I really hope this automatically resizes lol
-                                        std::vector<std::vector<PropIdRaw>>& sad = partialStatics[(*sunlambda_it)];
-                                        if (sad.size() == 0)
-                                        {
-                                            std::vector<PropIdRaw> p((*typeset_it).size());
-                                            sad.push_back(p);
-                                        }
-                                        std::cout << sad.size() << std::endl;
-                                        sad[0][i] = id; // TODO replace 0, WHICH PARTIAL STATIC TO CHOOSE?? creator.reuseOnStages
-                                        
-                                    }
-                                    i++;
-                                    break;
-                                }
+                                partialStatics[(*sunlambda_it)][propTypeId].push_back(id);
                             }
                         }
                     }
@@ -353,9 +343,9 @@ public:
                 std::unordered_map<PropTypeId, PropIdRaw> partialStaticNeighbors;
                 auto FindPartialStatic = [sunlambda_it, &partialStaticNeighbors, &IsPropCompatibleWithSunLambda](PropTypeId ptid)
                 {
-                    for (auto& partialStaticVector : partialStatics[(*sunlambda_it)])
+                    for (auto& partialStaticsOfType : partialStatics[(*sunlambda_it)])
                     {
-                        for (const PropIdRaw& partialStatic : partialStaticVector)
+                        for (const PropIdRaw& partialStatic : partialStaticsOfType.second)
                         {
                             if (IsPropCompatibleWithSunLambda(ptid, partialStatic))
                             {
@@ -424,6 +414,7 @@ public:
                         if (ptid == propTypeId) 
                         {
                             addedPropTypeIndex = i;
+                            i++;
                             continue;
                         }
                         if (partialStaticNeighbors.count(ptid))
@@ -526,45 +517,52 @@ public:
         }
     }
 
+    static inline size_t GetTypesetIndex(SunLambda::Id sunid, PropTypeId ptid)
+    {
+        size_t i = 0;
+        for (PropTypeId& seek_ptid : sunLambdaTypesets[sunid])
+        {
+            if (seek_ptid == ptid) return i;
+            i++;
+        }
+        return i;
+    }
+
     static void RemovePropsDelayed()
     {
         // TODO:
-        // Remove props from partialStatics
-        // Remove props from staging
-        // Add props that were not removed and are not partial statics back to staging
         for (auto& broken : tuplesToBreakup)
         {
-            size_t i = 0;
-            for (PropTypeId& ptid : sunLambdaTypesets[broken.first])
-            {
-                if (propsToRemove.count(ptid) && propsToRemove.find(partialStatics[broken.first][i]))
-                i++;
-            }
-            // iterate through proptypeids of sunlambda with this id
-            // for (PropTypeId& propTypeId : sunLambdaTypesets[broken.first])
-            // {
-            //     if (propsToRemove[propTypeId].count(stagingPropTuples[broken.first][propTypeId][]))
-            // }
             for (auto tuple_it = broken.second.rbegin(); tuple_it != broken.second.rend(); ++tuple_it)
             {
                 // TODO: make this more efficient by swapping values to end and then erasing ending range
                 auto tuple = novelTuples[broken.first].begin() + (*tuple_it);
-                // TODO: Iterate through the tuple, checking and removing any partial static if it is contained in propsToRemove
+                // Iterate through the tuple, checking and removing any partial static if it is contained in propsToRemove
                 for (GlobalPropId& gpid : *tuple)
                 {
-                    if (propsToRemove.count(gpid.typeId) && propsToRemove[gpid.typeId].count(gpid.id))
+                    bool shouldRemoveProp = propsToRemove.count(gpid.typeId) && propsToRemove[gpid.typeId].count(gpid.id);
+                    if (shouldRemoveProp)
                     {
-                        if (partialStatics.count(broken.first))
+                        // Does this SunLambda have any partial static of this prop type
+                        if (partialStatics.count(broken.first) && partialStatics[broken.first].count(gpid.typeId))
                         {
-
+                            auto& pss = partialStatics[broken.first][gpid.typeId];
+                            auto s_it = std::find(pss.begin(), pss.end(), gpid.id);
+                            if (s_it != pss.end()) pss.erase(s_it);
                         }
+                    } else
+                    {
+                        // If the prop is not removed, but the tuple is broken, we should restage it
+                        std::cout << "Restage prop of type " << propTypeNames[gpid.typeId] << " on SunLambda " << SunLambdaRegistry::GetInstance().Get(broken.first).name << std::endl;
+                        BicycleMango::stagingPropTuples[broken.first][gpid.typeId].push_back(gpid.id);
                     }
+                    
                 }
+                // TODO: Call breakups
                 novelTuples[broken.first].erase(tuple);
             }
         }
 
-        // Call breakups
         for (auto& propData : propsToRemove)
         {
             for (const PropIdRaw& propId : propData.second)

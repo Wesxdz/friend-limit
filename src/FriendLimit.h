@@ -17,14 +17,6 @@ public:
     {
         srand(time(NULL));
         Resources::inst = new Resources();
-        
-        sf::Music soundtrack;
-        if (!soundtrack.openFromFile("resources/sounds/op1/wayward-wander.ogg"))
-        {
-            std::cout <<"Soundtrack failed to load" << std::endl;
-        }
-        soundtrack.setLoop(true);
-        soundtrack.play();
         FriendLimit::SetupSunLambdas();
         FriendLimit::SetupWindow();
         do {
@@ -34,7 +26,7 @@ public:
             {
                 BicycleMango::Loop();
             }
-            BicycleMango::RemoveProps([](std::set<Stage>& stages) { return stages.count({GAME_STATE, 0}); });
+            BicycleMango::RemoveProps([](std::set<Stage>& stages) { return !stages.count({WINDOW, 0}); });
             // BicycleMango::Reset();
         } while (shouldSetupNewGame);
         
@@ -48,6 +40,7 @@ public:
         // SUNS MUST BE PLANNED BEFORE ADDING PROPS SO THAT THERE IS A NON-NULL COMPATABILITY CONSTRANT CURRENTLY
         // What should probably be done instead is only require adding compatability constraints before adding props, not necessarily all planning
         BicycleMango::Plan(PollWindowEvents::Id(), {FORAGE, 3});
+        BicycleMango::Plan(Test::Id(), {FORAGE, 10});
         BicycleMango::Plan(EnterGame::Id(), {INPUT});
         
         BicycleMango::Plan(SetPrevPos::Id(), {FORAGE, 10});
@@ -69,6 +62,7 @@ public:
         
         BicycleMango::Plan(ResolveMoves::Id(), {UPDATE, 150});
         BicycleMango::Plan(DisplayWindow::Id(), {DISPLAY});
+        BicycleMango::Plan(RenderBackground::Id(), {RENDER, 1});
         BicycleMango::Plan(RenderGrid::Id(), {RENDER, 5});
         BicycleMango::Plan(RenderCursor::Id(), {RENDER, 50}, moverIsPlayer);
         BicycleMango::Plan(DisplayUpdateStats::Id(), {RENDER, 100});
@@ -85,8 +79,17 @@ public:
         game->window.setVerticalSyncEnabled(true);
         game->window.setKeyRepeatEnabled(false);
         game->window.create(sf::VideoMode(128, 160), "Friend Limit", sf::Style::Titlebar | sf::Style::Close);
-        // title->sprite.setTexture(*Resources::inst->LoadTexture("title.png"));
-        BicycleMango::AddProp<MenuManager>({{WINDOW, 0}});
+        
+        auto menu = BicycleMango::AddProp<MenuManager>({{WINDOW, 0}});
+        menu->background.setTexture(*Resources::inst->LoadTexture("title.png"));
+
+        auto audio = BicycleMango::AddProp<AudioManager>({{WINDOW, 0}});
+        audio->soundtrack = std::make_unique<sf::Music>();
+        audio->soundtrack->openFromFile("resources/sounds/op1/wayward-wander.ogg");
+        audio->soundtrack->setLoop(true);
+        audio->soundtrack->play();
+        audio->placeApple.setBuffer(*Resources::inst->LoadSoundBuffer("place-apple.wav"));
+        audio->eat.setBuffer(*Resources::inst->LoadSoundBuffer("eat.wav"));
     }
     
     static void SetupGameplay()
@@ -109,19 +112,16 @@ public:
         stats->swords.setFillColor(sf::Color(148, 0, 255));
         stats->swordsAnchorPos = {84, 7};
         
-        auto audio = BicycleMango::AddProp<AudioManager>({{GAME_STATE, 0}});
-        audio->placeApple.setBuffer(*Resources::inst->LoadSoundBuffer("place-apple.wav"));
-        audio->eat.setBuffer(*Resources::inst->LoadSoundBuffer("eat.wav"));
-        
-        auto grid = BicycleMango::AddProp<Grid>({{GAME_STATE, 0}});
+        BicycleMango::AddProp<Grid>({{GAME_STATE, 0}});
         auto moveResolver = BicycleMango::AddProp<MoveResolver>({{GAME_STATE, 0}});
         moveResolver->beatSFX.setBuffer(*Resources::inst->LoadSoundBuffer("op1/beat.wav"));
         
         // TODO Variadic stages for AddProp
         
         auto snakeMover = BicycleMango::AddProp<Mover>({{SNAKE, 0}, {SNAKE_HEAD, 0}});
-        snakeMover->pos = {grid->cols - 2, grid->rows - 2};
-        snakeMover->prevMove = snakeMover->nextMove = Direction::NORTH;
+        // snakeMover->pos = {grid->cols - 2, grid->rows - 2};
+        snakeMover->pos = {10, 5};
+        snakeMover->prevMove = snakeMover->nextMove = Direction::WEST;
         
         auto snakeAI = BicycleMango::AddProp<SnakeAI>({{SNAKE, 0}});
         snakeAI->snakeParts.push_back(snakeMover->pos);
@@ -129,5 +129,7 @@ public:
         auto playerMover = BicycleMango::AddProp<Mover>({{PLAYER, 0}, {GAME_STATE, 0}});
         playerMover->pos = {1, 1};
         playerMover->prevMove = playerMover->nextMove = Direction::SOUTH;
+
+        BicycleMango::RemoveProps([](std::set<Stage>& stages) { return stages.count({PLAYER, 0}); });
     }
 };

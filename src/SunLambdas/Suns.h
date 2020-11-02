@@ -14,8 +14,9 @@
 
 // TODO Make sure typesets are in the same order always (for performance) and enforce that :/
 // TODO: Refactor WindowGameState into another Events prop for clarity
- 
-DeclareSunLambda(EnterGame, WindowGameState&, MenuManager&);
+
+DeclareSunLambda(Test, WindowGameState&)
+DeclareSunLambda(EnterGame, WindowGameState&, MenuManager&, AudioManager&);
 DeclareSunLambda(RenderCursor, WindowGameState&, Mover&); 
 DeclareSunLambda(SetPrevPos, Mover&);
 DeclareSunLambda(PlayerPlaceTiles, WindowGameState&, Grid&, Mover&, AudioManager&);
@@ -28,6 +29,7 @@ DeclareSunLambda(ResolveMoves, MoveResolver&, Grid&, SnakeAI&, ConflictStats&, A
 
 DeclareSunLambda(SetupGrid, Grid&);
 DeclareSunLambda(RenderGrid, WindowGameState&, Grid&, SnakeAI&);
+DeclareSunLambda(RenderBackground, WindowGameState&, MenuManager&);
 
 DeclareSunLambda(DisplayUpdateStats, WindowGameState&, StatRenderInfo&, ConflictStats&);
 
