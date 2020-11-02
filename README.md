@@ -12,3 +12,12 @@ or after a standard clone, run these at the root directory
 git submodule init
 git submodule update
 ```
+
+To build and play, go to root directory and then run
+```
+mkdir build
+cd build
+cmake ..
+make -j16
+./friendlimit
+```
