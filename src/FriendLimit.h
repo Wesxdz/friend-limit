@@ -106,8 +106,7 @@ public:
         stats->swordsAnchorPos = {84, 7};
         
         BicycleMango::AddProp<Grid>({{GAME_STATE, 0}});
-        auto moveResolver = BicycleMango::AddProp<MoveResolver>({{GAME_STATE, 0}});
-        // moveResolver->beatSFX.setBuffer(*Resources::inst->LoadSoundBuffer("op1/beat.wav"));
+        BicycleMango::AddProp<MoveResolver>({{GAME_STATE, 0}});
         
         // TODO Variadic stages for AddProp
         

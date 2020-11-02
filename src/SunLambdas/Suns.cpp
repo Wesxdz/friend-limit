@@ -10,9 +10,9 @@ void EnterGame_Act(WindowGameState& game, MenuManager& menu, AudioManager& audio
 {
     if (!game.events[sf::Event::EventType::KeyPressed].empty())
     {
-        if (menu.status == MenuManager::TITLE || menu.status == MenuManager::GAME_OVER)
+        if (menu.GetStatus() == MenuManager::TITLE || (menu.GetStatus() == MenuManager::GAME_OVER && menu.sinceStatusChange.getElapsedTime() > sf::seconds(1.0f)))
         {
-            menu.status = MenuManager::PLAYING;
+            menu.SetStatus(MenuManager::PLAYING);
             menu.background.setTexture(*Resources::inst->LoadTexture("play-area.png"));
             if (audio.soundtrack->getStatus() != sf::SoundSource::Playing)
             {
@@ -204,7 +204,6 @@ void EvaluateMoves_Act(Grid& grid, MoveResolver& resolver, Mover& mover)
 void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictStats& stats, AudioManager& audio, MenuManager& menu)
 {
     if (!resolver.moveThisFrame) return;
-    std::cout << ai.snakeParts.size() << std::endl;
     // TODO Sort by priority
     auto movers = BicycleMango::GetProps<Mover>();
     for (MoveResolver::MoveRequest& request : resolver.requestedMoves)
@@ -219,7 +218,7 @@ void ResolveMoves_Act(MoveResolver& resolver, Grid& grid, SnakeAI& ai, ConflictS
         // TODO Respond to all stages interaction
         auto gameOver = [&menu, &audio]()
         {
-            menu.status = MenuManager::Status::GAME_OVER;
+            menu.SetStatus(MenuManager::Status::GAME_OVER);
             std::cout << "GAME OVER!" << std::endl;
             menu.background.setTexture(*Resources::inst->LoadTexture("game-over.png"));
             audio.soundtrack->stop();

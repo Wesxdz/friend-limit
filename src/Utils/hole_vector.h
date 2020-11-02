@@ -1,18 +1,11 @@
 #pragma once
 
-#include "data.h"
 #include "id_pool.h"
 
 template<typename T, typename Id = size_t>
 class HoleVector
 {
 public:
-	struct Hole
-	{
-		bool fill = false;
-		T object = {};
-	};
-    
 	class iterator
     {
         public:
@@ -22,7 +15,7 @@ public:
             typedef T* pointer;
             typedef std::forward_iterator_tag iterator_category;
             typedef int difference_type;
-            iterator(Hole* ptr) : ptr(ptr) { }
+            iterator(std::optional<T>* ptr) : ptr(ptr) { }
             self_type operator++(){ self_type i = *this; advance(); return i; }
             self_type operator++(int junk) { advance(); return *this; }
             reference operator*() { return ptr->object; }
@@ -32,10 +25,10 @@ public:
 
             void advance()
             {
-            	while(!(++ptr)->fill);
+            	while(ptr++);
             }
         private:
-            Hole* ptr;
+            std::optional<T>* ptr;
     };
 
 	class const_iterator
@@ -49,7 +42,7 @@ public:
             typedef const T* pointer_const;
             typedef std::forward_iterator_tag iterator_category;
             typedef int difference_type;
-            const_iterator(Hole* ptr) : ptr(ptr) { }
+            const_iterator(std::optional<T>* ptr) : ptr(ptr) { }
             self_type operator++(){ self_type i = *this; advance(); return i; }
             self_type operator++(int junk) { advance(); return *this; }
             reference_const operator*() { return ptr->object; }
@@ -59,10 +52,10 @@ public:
 
             void advance()
             {
-            	while(!(++ptr)->fill);
+            	while(ptr++);
             }
         private:
-            Hole* ptr;
+            std::optional<T>* ptr;
     };
 
     iterator begin()
@@ -88,46 +81,34 @@ public:
 	std::pair<Id, T&> next()
 	{
 		const Id id = idPool.next();
-        // const Id id = Pool::ids[Pool::GetPropTypeId<T>()].next();
-
 		if(id >= (buffer.size() - 1))
 		{
             buffer.resize(id + 2);
-            buffer.back().fill = true;
 		}
-
-        Hole& hole = buffer[id];
-		hole.fill = true;
-
-		return {id, hole.object};
+        buffer[id] = T();
+		return {id, buffer[id].value()};
 	}
 
 	void free(Id id)
 	{
-        std::cout << "Freeing hole vector" << std::endl;
-        buffer[id].object.~T();
-        buffer[id].fill = false;
 		idPool.free(id);
-        // Pool::ids[Pool::GetPropTypeId<T>()].free(id);
 	}
 
 	HoleVector()
 	{
 		buffer.resize(1);
-		buffer[0].fill = true;
 	}
 
 	T& operator[](Id id)
 	{
-		return buffer[id].object;
+		return buffer[id].value();
 	}
 
 	const T& operator[](Id id) const
 	{
-		return buffer[id].object;
+		return buffer[id].value();
 	}
 
-//private:
-	std::vector<Hole> buffer;
+	std::vector<std::optional<T>> buffer;
 	IdPool<Id, true> idPool;
 };

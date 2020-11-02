@@ -20,26 +20,14 @@ struct MenuManager
         GAME_OVER,
         PAUSED,
         PLAYING,
-    } status = TITLE;
-    Status transitionTo; // Need to delay transition so sountrack can match up with beat
+    };
     sf::Clock sinceStart;
     sf::Sprite background;
-};
-
-struct Frames
-{
-    std::vector<sf::IntRect> frames;
-};
-
-struct FrameAnimator
-{
-    float progress;
-    std::vector<sf::Time> frameTimes;
-};
-
-struct Camera
-{
-    sf::View view;
+    sf::Clock sinceStatusChange;
+    Status GetStatus() { return status; }
+    void SetStatus(Status nextStatus) { status = nextStatus; sinceStatusChange.restart(); }
+private:
+    Status status = TITLE;
 };
 
 struct StatRenderInfo
@@ -98,7 +86,6 @@ struct MoveResolver
     float timeBetweenMoves = 0.25f;
     sf::Clock moveTimer;
     bool moveThisFrame = false;
-    sf::Sound beatSFX;
     int beatsCount;
     // If two Movers try to move to the same pos, we need to resolve this appropriately depending on the groups
     struct MoveRequest
@@ -127,11 +114,6 @@ struct SnakeAI
     std::vector<sf::Vector2i> snakeParts;
     // TODO Non static
     static inline std::unordered_map<Group, int> magnets = {{SNAKE_TAIL, -100}, {SNAKE_BODY, -200}, {PEASANT, 100}, {KNIGHT, 70}, {HERO, 80}, {APPLE, 150}, {PLAYER, 100}};
-    ~SnakeAI() 
-    {
-        std::cout << "Clearing snake parts" << std::endl;
-        snakeParts.clear(); 
-    }
 };
 
 struct Spawner
